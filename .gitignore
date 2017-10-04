@@ -1,0 +1,8 @@
+*.pyc
+*.gz
+*.png
+*.eps
+data/
+losses/
+__pycache__
+*.py~
