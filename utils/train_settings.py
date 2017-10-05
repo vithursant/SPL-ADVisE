@@ -21,8 +21,12 @@ def parse_settings():
 	                    help='random seed (default: 1)')
 	parser.add_argument('--log-interval', type=int, default=20, metavar='N',
 	                    help='how many batches to wait before logging training status')
+	parser.add_argument('--spl', action='store_true', default=False,
+						help='enables self-paced learning framework')
 	parser.add_argument('--spld', action='store_true', default=False,
 						help='enables self-paced learning with diversity')
+	parser.add_argument('--spldml', action='store_true', default=False,
+						help='Use the SPL DML sampler')
 	parser.add_argument('--dml', action='store_true', default=False,
 						help='enables deep metric learning')
 	parser.add_argument('--curriculum-epochs', type=int, default=40, metavar='N',

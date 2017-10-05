@@ -13,6 +13,8 @@ import os
 import sys
 import timeit
 
+from math import ceil
+
 import numpy
 numpy.random.seed(5)
 
@@ -51,6 +53,10 @@ from visualizer.visualize import VisdomLinePlotter
 # used for logging to TensorBoard
 from tensorboard_logger import configure, log_value
 
+from magnet_loss.magnet_tools import *
+
+import pdb
+import random
 #viz = visdom.Visdom()
 
 args = parse_settings()
@@ -118,7 +124,7 @@ def adjust_learning_rate(optimizer, epoch, lr):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def train(trainloader, trainset, n_train):
+def train(trainloader, trainset, testloader, n_train):
 
 	'''
 	TODO:
@@ -140,11 +146,19 @@ def train(trainloader, trainset, n_train):
 	curriculum_rate = args.curriculum_rate
 	momentum = numpy.float64(args.momentum)
 	decay_after_epochs = args.decay_after_epochs
+	tsne_dim = 10
+	k = 8
+	m = 8
+	d = 8
+
+	epoch_steps = int(ceil(len(trainset)) / args.batch_size)
+	n_steps = epoch_steps * 15
+	#pdb.set_trace()
 
 	global plotter
 	plotter = VisdomLinePlotter(env_name=args.name)
 
-	if args.spld:
+	if args.spl:
 		print("Start SPLD for LeNet")
 		spld_params = [5000, 1e-3, 5e-2, 1e-1]
 
@@ -166,10 +180,254 @@ def train(trainloader, trainset, n_train):
 
 		model.cuda()
 		criterion = nn.CrossEntropyLoss(size_average=False)
+
 		optimizer = optim.SGD(model.parameters(),
                               lr=learning_rate,
                               momentum=momentum)
 
+
+		#train_features_seq = extract_features(model,
+		#									  n_train,
+		#									  trainloader)
+
+		#labels_, cluster_centers, nn_center = group_data(train_features_seq,
+		#												 tsne_dim,
+		#												 args.num_cluster,
+		#												 'mnist',
+		#												 save_file=False)
+
+		# Create batcher
+		labels = getattr(trainset, 'train_labels')
+
+		initial_reps = compute_reps(model, trainset, 400)
+
+		batch_builder = ClusterBatchBuilder(labels, k, m, d)
+		batch_builder.update_clusters(initial_reps)
+
+		#pdb.set_trace()
+
+		loss_vec = numpy.array([])
+		losses = AverageMeter()
+		accs = AverageMeter()
+		batch_losses = []
+
+		batch_example_inds, batch_class_inds = batch_builder.gen_batch()
+		trainloader.sampler.batch_indices = batch_example_inds
+		#pdb.set_trace()
+
+		_ = model.train()
+		
+		for i in tqdm(range(n_steps)):
+			'''
+			if i == 0:
+				trainloader.sampler.batch_indices = random.sample(range(len(trainset)), 
+																  len(trainset))
+
+			if i > 0:
+				print("Start self-paced learning with diversity")
+				train_idx = numpy.array([])
+
+				for i in range(args.num_cluster):
+					i_cluster = numpy.where(labels_ == i)[0]
+					iloss_vec = loss_vec[i_cluster]
+					#pdb.set_trace()
+					#print(iloss_vec)
+					sortIndex = numpy.argsort(iloss_vec)
+					#print(sortIndex)
+					#print(iloss_vec[sortIndex])
+					#exit()
+					#print(iloss_vec)
+					#iloss_vec = min_max_sort(iloss_vec, len(iloss_vec))
+					#print(iloss_vec)
+					#exit()
+
+					#iloss_vec -= spld_params[1] * \
+					#						numpy.divide(1,
+					#									numpy.sqrt(range(1, 1+len(i_cluster)))
+	                #                           + numpy.sqrt(range(len(i_cluster))))
+
+					iloss_vec[sortIndex] -= spld_params[1] * \
+											numpy.divide(1,
+														numpy.sqrt(range(1, 1+len(i_cluster)))
+	                                            + numpy.sqrt(range(len(i_cluster))))
+
+					#exit()
+					K = min([spld_params[0], len(iloss_vec)])
+					train_idx = numpy.append(train_idx,
+	                                         i_cluster[numpy.argpartition(iloss_vec, K-1)[:K]])
+
+				train_idx = train_idx.astype('int32')
+
+				# Increase the learning pace
+				spld_params[0] *= (1 + spld_params[2])
+				spld_params[0] = int(round(spld_params[0]))
+				spld_params[1] *= (1 + spld_params[3])	
+
+				print("Finished SPLD")
+
+				trainloader.sampler.batch_indices = train_idx
+				pdb.set_trace()
+				loss_vec = numpy.array([])
+			'''
+			for batch_idx, (img, target) in enumerate(trainloader):
+				img = Variable(img).cuda()
+				target = Variable(target).cuda()
+
+				optimizer.zero_grad()
+				output, features = model(img)
+
+				# Compute the loss for each sample in the minibatch
+				onehot_target = Variable(encode_onehot(target, args.num_classes))
+				xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(output))
+                                                                    * onehot_target,
+                                                                dim=1,
+                                                                keepdim=True)
+
+				# Sum minibatch loss vector
+				loss_vec = numpy.append(loss_vec,
+										xentropy_loss_vector.data.cpu().numpy())
+				xentropy_loss_vector_sum = xentropy_loss_vector.sum()
+				xentropy_loss_vector_mean = xentropy_loss_vector.mean()
+
+				# Backward
+				xentropy_loss_vector_sum.backward()
+				optimizer.step()
+
+				# Compute training accuracy
+				_, predict = torch.max(output, 1)
+
+				train_accuracy = (target == predict.squeeze()).float().mean()
+
+				'''
+				if batch_idx % args.log_interval == 0:
+					print('Train Epoch: {} [{}/{}]\t'
+							'Loss: {:.4f} ({:.4f}) \t'
+							'Acc: {:.2f}% ({:.2f}%) \t'.format(i,
+                                                                batch_idx * len(img),
+                                                                len(trainset),
+                                                                losses.val, losses.avg,
+                                                                100. * accs.val,
+                                                                100. * accs.avg))
+				'''
+				#pdb.set_trace()
+			#pdb.set_trace()
+
+			batch_builder.update_losses(batch_example_inds,
+										xentropy_loss_vector.squeeze())
+			batch_losses.append(xentropy_loss_vector_mean.data[0])
+
+			batch_example_inds, batch_class_inds = batch_builder.gen_batch()
+			trainloader.sampler.batch_indices = batch_example_inds
+
+			if not i % 1000:
+				print("Refreshing clusters")
+				reps = compute_reps(model, trainset, 400)
+				batch_builder.update_clusters(reps)
+
+			# log avg values to somewhere
+			losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
+			accs.update(train_accuracy.data[0], img.size(0))
+
+			if args.visdom:
+				plotter.plot('acc', 'train', i, accs.avg)
+				plotter.plot('loss', 'train', i, losses.avg)
+
+			if i % args.log_interval == 0:
+				print('Train Epoch: {} [{}/{}]\t'
+						'Loss: {:.4f} ({:.4f}) \t'
+						'Acc: {:.2f}% ({:.2f}%) \t'.format(i,
+                                                            i,
+                                                            n_steps,
+                                                            losses.val, losses.avg,
+                                                            100. * accs.val,
+                                                            100. * accs.avg))
+
+				_ = model.eval()
+
+				# Testing
+				correct_cnt = 0
+				ave_loss = 0
+				losses = AverageMeter()
+				accs = AverageMeter()
+
+				for batch_idx, (img, target) in enumerate(testloader):
+					img = Variable(img).cuda()
+					target = Variable(target).cuda()
+
+					score, _ = model(img)
+
+					# Compute the loss for each sample in the minibatch
+					onehot_target = Variable(encode_onehot(target, args.num_classes))
+					xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(score))
+		                                                    * onehot_target,
+		                                                  dim=1,
+		                                                  keepdim=True)
+
+					# Sum minibatch loss vector
+					loss_vec = numpy.append(loss_vec,
+											xentropy_loss_vector.data.cpu().numpy())
+
+					xentropy_loss_vector_sum = xentropy_loss_vector.sum()
+					xentropy_loss_vector_mean = xentropy_loss_vector.mean()
+
+					_, predict = torch.max(score, 1)
+					test_accuracy = (target == predict.squeeze()).float().mean()
+
+				accs.update(test_accuracy.data[0], img.size(0))
+				losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
+
+				# log avg values to somewhere
+				#pdb.set_trace()
+				print('\nTest set: Average loss: {:.4f}, Accuracy: {:.2f}%\n'.format(losses.avg, 100. * accs.avg))
+
+				# log avg values to somewhere
+				if args.visdom:
+					plotter.plot('acc', 'test', i, accs.avg)
+					plotter.plot('loss', 'test', i, losses.avg)
+		'''
+		# Testing
+		correct_cnt = 0
+		ave_loss = 0
+		losses = AverageMeter()
+		accs = AverageMeter()
+
+		for batch_idx, (img, target) in enumerate(testloader):
+			img = Variable(img).cuda()
+			target = Variable(target).cuda()
+
+			score, _ = model(img)
+
+			# Compute the loss for each sample in the minibatch
+			onehot_target = Variable(encode_onehot(target, args.num_classes))
+			xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(score))
+                                                    * onehot_target,
+                                                  dim=1,
+                                                  keepdim=True)
+
+			# Sum minibatch loss vector
+			loss_vec = numpy.append(loss_vec,
+									xentropy_loss_vector.data.cpu().numpy())
+
+			xentropy_loss_vector_sum = xentropy_loss_vector.sum()
+			xentropy_loss_vector_mean = xentropy_loss_vector.mean()
+
+			_, predict = torch.max(score, 1)
+			test_accuracy = (target == predict.squeeze()).float().mean()
+
+			accs.update(test_accuracy.data[0], img.size(0))
+			losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
+
+		# log avg values to somewhere
+		pdb.set_trace()
+		print('\nTest set: Average loss: {:.4f}, Accuracy: {:.2f}%\n'.format(losses.avg, 100. * accs.avg))
+		'''
+		exit()
+
+
+
+		'''
+		OLD STUFF
+		'''
 		for curriculum_epoch in tqdm(range(args.curriculum_epochs)):
 			running_loss = 0.
 			running_acc = 0
@@ -528,4 +786,4 @@ if __name__ == '__main__':
 	print("==>>> Total Number of Test Batches: {}".format(n_test_batches))
 
 	print("Starting Training...")
-	train(trainloader, trainset, n_train)
+	train(trainloader, trainset, testloader, n_train)

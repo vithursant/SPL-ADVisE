@@ -98,6 +98,19 @@ def load_dataset(args):
 								batch_size=args.batch_size,
 								shuffle=False,
 								num_workers=4)
+	elif args.spldml:
+		n_train = len(trainset)
+		train_sampler = SubsetSequentialSampler(range(len(trainset)), range(args.batch_size))
+		trainloader = DataLoader(trainset,
+								 batch_size=args.batch_size,
+								 shuffle=False,
+								 num_workers=1,
+								 sampler=train_sampler)
+
+		testloader = DataLoader(testset,
+								batch_size=args.batch_size,
+								shuffle=True,
+								num_workers=1)
 	# Deep Metric Learning
 	elif args.dml:
 		n_train = len(trainset)
