@@ -316,7 +316,8 @@ def train(trainloader, trainset, testloader, n_train):
 										xentropy_loss_vector.squeeze())
 			batch_losses.append(xentropy_loss_vector_mean.data[0])
 
-			batch_example_inds, batch_class_inds = batch_builder.gen_batch()
+			batch_builder.gen_batch_spl(spld_params[1])
+			#batch_example_inds, batch_class_inds = batch_builder.gen_batch()
 			trainloader.sampler.batch_indices = batch_example_inds
 
 			if not i % 1000:
@@ -544,9 +545,11 @@ def train(trainloader, trainset, testloader, n_train):
 
 			for i in range(args.num_cluster):
 				i_cluster = numpy.where(labels_ == i)[0]
+				#pdb.set_trace()
 				#print(i_cluster)
 				#exit()
 				iloss_vec = loss_vec[i_cluster]
+				#pdb.set_trace()
 				#print(iloss_vec)
 				#sortIndex = numpy.argsort(iloss_vec)
 				#print(sortIndex)

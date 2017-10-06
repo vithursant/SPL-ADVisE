@@ -41,9 +41,9 @@ class ClusterBatchBuilder(object):
             self.num_classes = np.unique(labels.numpy()).shape[0]
             self.labels = labels.numpy()
 
-        self.k = k
-        self.m = m
-        self.d = d
+        self.k = k # Class labels for each example
+        self.m = m # The number of clusters in the batch.
+        self.d = d # The number of examples in each cluster
 
         self.centroids = None
 
@@ -65,32 +65,41 @@ class ClusterBatchBuilder(object):
         recompute clusters and store example cluster assignments in a
         quickly sampleable form.
         """
-        # Lazily allocate array for centroids
+
+        # Lazily allocate array of zeroes as placeholders for centroids 
         if self.centroids is None:
             self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
 
+        #pdb.set_trace()
 
         for c in range(self.num_classes):
 
-            class_mask = self.labels == c
+            class_mask = self.labels == c # Boolean mask for selecting examples
             #pdb.set_trace()
-            class_examples = rep_data[class_mask]
+
+            class_examples = rep_data[class_mask] # Mask features based on the class mask
+            #pdb.set_trace()
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
             kmeans.fit(class_examples)
+            #pdb.set_trace()
 
             # Save cluster centroids for finding impostor clusters
             start = self.get_cluster_ind(c, 0)
             stop = self.get_cluster_ind(c, self.k)
-            self.centroids[start:stop] = kmeans.cluster_centers_
+            self.centroids[start:stop] = kmeans.cluster_centers_ # Should create self.k * self.num_classes number of centroids
+            #pdb.set_trace()
 
             # Update assignments with new global cluster indexes
             self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
+            #pdb.set_trace()
 
         # Construct a map from cluster to example indexes for fast batch creation
         for cluster in range(self.k * self.num_classes):
             cluster_mask = self.assignments == cluster
-            self.cluster_assignments[cluster] = np.flatnonzero(cluster_mask)
-
+            # np.flatnonzero return indices that are non-zero in the flattened version of cluster_mask
+            self.cluster_assignments[cluster] = np.flatnonzero(cluster_mask)    # Example indexes mapped to the cluster
+            #pdb.set_trace()
+        #pdb.set_trace()
 
     def update_losses(self, indexes, losses):
         """
@@ -104,26 +113,24 @@ class ClusterBatchBuilder(object):
             self.has_loss = np.zeros_like(self.labels, bool)
 
         # Update example losses
-        #print(indexes)
-        #print(type(indexes))
-        #indexes = np.array(indexes)
-        #print(indexes)
-        #print(type(indexes))
         losses = losses.data.cpu().numpy()
-        #print(losses)
-        #print(type(losses))
-        #sprint(losses.view(12,-1))
-        #exit()
+        #pdb.set_trace()
+
         self.example_losses[indexes] = losses
         self.has_loss[indexes] = losses
 
         # Find affected clusters and update the corresponding cluster losses
+        # Gets the clusters in which the lossses belong to
         clusters = np.unique(self.assignments[indexes])
+        #pdb.set_trace()
         for cluster in clusters:
             cluster_inds = self.assignments == cluster
             cluster_example_losses = self.example_losses[cluster_inds]
 
+            #pdb.set_trace()
+
             # Take the average closs in the cluster of examples for which we have measured a loss
+            # Array of clusters with their average example loss
             self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])
 
     def gen_batch(self):
@@ -143,23 +150,38 @@ class ClusterBatchBuilder(object):
         else:
             seed_cluster = np.random.choice(self.num_classes * self.k)
 
+        #pdb.set_trace()
+
         # Get imposter clusters by ranking centroids by distance
         sq_dists = ((self.centroids[seed_cluster] - self.centroids) ** 2).sum(axis=1)
+
+        #pdb.set_trace()
 
         # Assure only clusters of different class from seed are chosen
         sq_dists[self.get_class_ind(seed_cluster) == self.cluster_classes] = np.inf
 
+        #pdb.set_trace()
+
         # Get top impostor clusters and add seed
+
+        # Returns an array of indices of the same shape as a that index data along the given axis in partitioned order.
         clusters = np.argpartition(sq_dists, self.m-1)[:self.m-1]
         clusters = np.concatenate([[seed_cluster], clusters])
 
+        #pdb.set_trace()
+
         # Sample examples uniformly from cluster
         batch_indexes = np.empty([self.m * self.d], int)
+        #pdb.set_trace()
         for i, c in enumerate(clusters):
+            #pdb.set_trace()
+            # Go through each cluster and select random sames that are size self.d
             x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x
+            #pdb.set_trace()
+        #pdb.set_trace()
 
         # Translate class indexes to index for classes within the batch
         class_inds = self.get_class_ind(clusters)
@@ -171,8 +193,54 @@ class ClusterBatchBuilder(object):
                 inds_map[c] = class_count
                 class_count += 1
             batch_class_inds.append(inds_map[c])
-
+            #pdb.set_trace()
+        #pdb.set_trace()
         return batch_indexes, np.repeat(batch_class_inds, self.d)
+
+    def gen_batch_spl(self, lambda_param):
+        """
+        Generate batch from DML for the SPL framework
+
+        TODO:
+            1. Do a forward/backward pass and get the loss for all the
+            samples in the dataset
+            2. Update the clusters with the losses
+            3. Generate a batch based on the loss, go through each cluster
+            select samples based on "easiness"
+        """
+        seed_cluster = np.random.choice(self.num_classes * self.k)
+
+        # Get imposter clusters
+        sq_dists = ((self.centroids[seed_cluster] - self.centroids) ** 2).sum(axis=1)
+
+        # Assure only clusters of different class from seed are chosen
+        sq_dists[self.get_class_ind(seed_cluster) == self.cluster_classes] = np.inf
+
+        # Get top imposter clusters and add seed
+        clusters = np.argpartition(sq_dists, self.m-1)[:self.m-1]
+        clusters = np.concatenate([[seed_cluster], clusters])
+
+        # Sample examples using SPLD
+        batch_indexes = np.zeros([self.m * self.d], int)
+        for i, c in enumerate(clusters):
+            # iloss vec = self.cluster_assignments[c]
+            iloss_vec = self.cluster_assignments[c]
+            pdb.set_trace()
+            #sortIndex = np.argsort(iloss_vec)
+            #pdb.set_trace()
+            apply_spld = lambda_param * \
+                            np.divide(1,
+                                         np.sqrt(range(1, 1+len(self.cluster_assignments[c])))
+                                         + np.sqrt(range(len(self.cluster_assignments[c]))))
+            pdb.set_trace()
+            iloss_vec -= apply_spld
+            pdb.set_trace()
+
+            start = i * self.d
+            stop = start + self.d
+            #batch_indexes[start:stop] = 
+            pdb.set_trace()
+        return None
 
     def get_cluster_ind(self, c, i):
         """
