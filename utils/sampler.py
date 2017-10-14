@@ -50,6 +50,27 @@ class SubsetSequentialSamplerSPLD(Sampler):
     def __len__(self):
         return len(self.indices)
 
+class SubsetSequentialSamplerSPLDML(Sampler):
+    """Samples elements sequentially from a given list of indices, without replacement.
+
+    Arguments:
+        indices (list): a list of indices
+    """
+
+    def __init__(self, indices, batch_indices):
+        self.indices = indices
+        self.batch_indices = batch_indices
+
+    def __iter__(self):
+        #self.batch_idx = []
+        #for i in self.batch_indices:
+        #    self.batch_idx.append(self.indices[i])
+
+        return (self.indices[i] for i in self.batch_indices)
+
+    def __len__(self):
+        return len(self.indices)
+
 """
 Classification based sampler.
 """

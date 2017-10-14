@@ -12,7 +12,7 @@ from torchvision import transforms
 from datasets.fashion import FASHION
 
 import numpy
-from utils.sampler import SubsetSequentialSampler, ClassificationBasedSampler, SubsetSequentialSamplerSPLD
+from utils.sampler import SubsetSequentialSampler, ClassificationBasedSampler, SubsetSequentialSamplerSPLDML, SubsetSequentialSamplerSPLD
 
 def select_sampler(args):
 	if args.mining == 'sss':
@@ -100,7 +100,7 @@ def load_dataset(args):
 								num_workers=4)
 	elif args.spldml:
 		n_train = len(trainset)
-		train_sampler = SubsetSequentialSampler(range(len(trainset)), range(args.batch_size))
+		train_sampler = SubsetSequentialSamplerSPLDML(range(len(trainset)), range(args.batch_size))
 		trainloader = DataLoader(trainset,
 								 batch_size=args.batch_size,
 								 shuffle=False,

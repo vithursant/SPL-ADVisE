@@ -55,6 +55,8 @@ from tensorboard_logger import configure, log_value
 
 from magnet_loss.magnet_tools import *
 
+from utils.sampler import SubsetSequentialSamplerSPLDML
+
 import pdb
 import random
 #viz = visdom.Visdom()
@@ -211,18 +213,27 @@ def train(trainloader, trainset, testloader, n_train):
 		accs = AverageMeter()
 		batch_losses = []
 
-		batch_example_inds, batch_class_inds = batch_builder.gen_batch()
-		trainloader.sampler.batch_indices = batch_example_inds
+		#batch_example_inds, batch_class_inds = batch_builder.gen_batch()
+		#trainloader.sampler.batch_indices = batch_example_inds
 		#pdb.set_trace()
 
 		_ = model.train()
 		
 		for i in tqdm(range(n_steps)):
-			'''
 			if i == 0:
-				trainloader.sampler.batch_indices = random.sample(range(len(trainset)), 
-																  len(trainset))
+				batch_example_inds = random.sample(range(len(trainset)), len(trainset))
+				#pdb.set_trace()
+				trainloader.sampler.batch_indices = batch_example_inds
 
+			else:
+				train_sampler = SubsetSequentialSamplerSPLDML(range(len(trainset)), range(len(batch_train_inds)))
+				trainloader = DataLoader(trainset,
+								 batch_size=4,
+								 shuffle=False,
+								 num_workers=1,
+								 sampler=train_sampler)
+
+			'''
 			if i > 0:
 				print("Start self-paced learning with diversity")
 				train_idx = numpy.array([])
@@ -269,7 +280,7 @@ def train(trainloader, trainset, testloader, n_train):
 				pdb.set_trace()
 				loss_vec = numpy.array([])
 			'''
-			for batch_idx, (img, target) in enumerate(trainloader):
+			for batch_idx, (img, target) in tqdm(enumerate(trainloader)):
 				img = Variable(img).cuda()
 				target = Variable(target).cuda()
 
@@ -311,19 +322,29 @@ def train(trainloader, trainset, testloader, n_train):
 				'''
 				#pdb.set_trace()
 			#pdb.set_trace()
-
-			batch_builder.update_losses(batch_example_inds,
+				start = batch_idx * args.batch_size
+				stop = start + args.batch_size
+				#pdb.set_trace()
+				batch_builder.update_losses(batch_example_inds[start:stop],
 										xentropy_loss_vector.squeeze())
-			batch_losses.append(xentropy_loss_vector_mean.data[0])
 
-			batch_builder.gen_batch_spl(spld_params[1])
+			#batch_builder.update_losses(batch_example_inds,
+			#							xentropy_loss_vector.squeeze())
+			#batch_losses.append(xentropy_loss_vector_mean.data[0])
+			#pdb.set_trace()
+			batch_train_inds = batch_builder.gen_batch_spl(spld_params[1], spld_params[2])
 			#batch_example_inds, batch_class_inds = batch_builder.gen_batch()
 			trainloader.sampler.batch_indices = batch_example_inds
+			#pdb.set_trace()
+			# Increase the learning pace
+			#spld_params[0] *= (1 + spld_params[2])
+			#spld_params[0] = int(round(spld_params[0]))
+			spld_params[1] *= (1 + spld_params[3])
 
-			if not i % 1000:
-				print("Refreshing clusters")
-				reps = compute_reps(model, trainset, 400)
-				batch_builder.update_clusters(reps)
+			#if not i % 1000:
+			#	print("Refreshing clusters")
+			#	reps = compute_reps(model, trainset, 400)
+			#	batch_builder.update_clusters(reps)
 
 			# log avg values to somewhere
 			losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
@@ -332,7 +353,7 @@ def train(trainloader, trainset, testloader, n_train):
 			if args.visdom:
 				plotter.plot('acc', 'train', i, accs.avg)
 				plotter.plot('loss', 'train', i, losses.avg)
-
+			'''
 			if i % args.log_interval == 0:
 				print('Train Epoch: {} [{}/{}]\t'
 						'Loss: {:.4f} ({:.4f}) \t'
@@ -385,6 +406,7 @@ def train(trainloader, trainset, testloader, n_train):
 				if args.visdom:
 					plotter.plot('acc', 'test', i, accs.avg)
 					plotter.plot('loss', 'test', i, losses.avg)
+		'''
 		'''
 		# Testing
 		correct_cnt = 0

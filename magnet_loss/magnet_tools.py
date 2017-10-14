@@ -110,6 +110,9 @@ class ClusterBatchBuilder(object):
         if self.example_losses is None:
             self.example_losses = np.zeros_like(self.labels, float)
             self.cluster_losses = np.zeros([self.k * self.num_classes], float)
+            #self.cluster_ex_losses = np.zeros([self.k * self.num_classes], float)
+            self.cluster_ex_losses = [None] * (self.k * self.num_classes)
+            self.cluster_ex_losses_idx = [None] * (self.k * self.num_classes)
             self.has_loss = np.zeros_like(self.labels, bool)
 
         # Update example losses
@@ -124,14 +127,16 @@ class ClusterBatchBuilder(object):
         clusters = np.unique(self.assignments[indexes])
         #pdb.set_trace()
         for cluster in clusters:
-            cluster_inds = self.assignments == cluster
-            cluster_example_losses = self.example_losses[cluster_inds]
+            cluster_inds_mask = self.assignments == cluster
+            cluster_example_losses = self.example_losses[cluster_inds_mask]
 
+            # TODO add a another variable for getting the losses for the cluster later on in gen_batch
+            self.cluster_ex_losses[cluster] = cluster_example_losses
             #pdb.set_trace()
 
             # Take the average closs in the cluster of examples for which we have measured a loss
             # Array of clusters with their average example loss
-            self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds]])
+            self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds_mask]]) # gets the losses within the cluster and calculates the mean
 
     def gen_batch(self):
         """
@@ -175,7 +180,7 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
         for i, c in enumerate(clusters):
             #pdb.set_trace()
-            # Go through each cluster and select random sames that are size self.d
+            # Go through each cluster and select random samples that are size self.d
             x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
             start = i * self.d
             stop = start + self.d
@@ -197,7 +202,7 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
         return batch_indexes, np.repeat(batch_class_inds, self.d)
 
-    def gen_batch_spl(self, lambda_param):
+    def gen_batch_spl(self, lambda_param, gamma_param):
         """
         Generate batch from DML for the SPL framework
 
@@ -222,25 +227,37 @@ class ClusterBatchBuilder(object):
 
         # Sample examples using SPLD
         batch_indexes = np.zeros([self.m * self.d], int)
-        for i, c in enumerate(clusters):
-            # iloss vec = self.cluster_assignments[c]
-            iloss_vec = self.cluster_assignments[c]
-            pdb.set_trace()
-            #sortIndex = np.argsort(iloss_vec)
-            #pdb.set_trace()
-            apply_spld = lambda_param * \
-                            np.divide(1,
-                                         np.sqrt(range(1, 1+len(self.cluster_assignments[c])))
-                                         + np.sqrt(range(len(self.cluster_assignments[c]))))
-            pdb.set_trace()
-            iloss_vec -= apply_spld
-            pdb.set_trace()
 
-            start = i * self.d
-            stop = start + self.d
-            #batch_indexes[start:stop] = 
-            pdb.set_trace()
-        return None
+        selected_samples_idx = np.zeros(len(self.labels), int)
+        selected_scores = np.zeros(len(self.labels), float)
+
+        pos_count = 0
+        neg_count = 0
+        total_count = 0
+        for j, cluster in enumerate(clusters):
+            # TODO make sure idx_incluster and loss_incluster lengths are the same
+            idx_incluster = self.cluster_assignments[cluster]
+            #loss_incluster = (self.cluster_ex_losses[cluster] - np.max(self.cluster_ex_losses[cluster]))/-np.ptp(self.cluster_ex_losses[cluster])
+            loss_incluster = np.sort(self.cluster_ex_losses[cluster])
+            loss_incluster = (loss_incluster - np.max(loss_incluster))/-np.ptp(loss_incluster)
+            rank_incluster = np.sort(np.argsort(loss_incluster)) + 1
+            #pdb.set_trace()
+
+            for i in range(len(loss_incluster)):
+                #pdb.set_trace()
+                total_count += 1
+                if(loss_incluster[i] < lambda_param + gamma_param / ((np.sqrt(rank_incluster[i]) + np.sqrt(rank_incluster[i]-1)))):
+                    pos_count += 1
+                    selected_samples_idx[idx_incluster[i]] = 1
+                else:
+                    neg_count += 1
+                    selected_samples_idx[idx_incluster[i]] = 0
+            selected_scores[idx_incluster[i]] = loss_incluster[i] - lambda_param - gamma_param /(np.sqrt(rank_incluster[i])+np.sqrt(rank_incluster[i]-1))
+            #pdb.set_trace()
+        selected_samples_idx = np.where(selected_samples_idx == 1)
+        sortedselected_idx = np.take(selected_scores, selected_samples_idx)
+        #pdb.set_trace()
+        return selected_samples_idx
 
     def get_cluster_ind(self, c, i):
         """
