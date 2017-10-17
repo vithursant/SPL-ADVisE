@@ -4,7 +4,7 @@ def parse_settings():
 
 	# Training settings
 	parser = argparse.ArgumentParser(description='PyTorch MNIST SPLD')
-	print(parser)
+	#print(parser)
 	parser.add_argument('--batch-size', type=int, default=32, metavar='N',
 	                    help='input batch size for training (default: 32)')
 	parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
@@ -69,20 +69,13 @@ def parse_settings():
 						help='weight decay (default: 5e-4)')
 	parser.add_argument('--no-augment', dest='augment', action='store_false',
 						help='whether to use standard augmentation (default: True)')
-	parser.add_argument('--droprate', default=0, type=float,
-						help='dropout probability (default: 0.0)')
 	parser.add_argument('--start-epoch', default=0, type=int,
 						help='manual epoch number (useful on restarts)')
 	parser.add_argument('--print-freq', '-p', default=10, type=int,
 						help='print frequency (default: 10)')
+	parser.add_argument('--net-type', default='wide-resnet', type=str, help='model')
+	parser.add_argument('--depth', default=28, type=int, help='depth of model')
+	parser.add_argument('--widen-factor', default=10, type=int, help='width of model')
+	parser.add_argument('--dropout', default=0.3, type=float, help='dropout_rate')
+	
 	return parser.parse_args()
-
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    """Saves checkpoint to disk"""
-    directory = "runs/%s/"%(args.name)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    filename = directory + filename
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, 'runs/%s/'%(args.name) + 'model_best.pth.tar')

@@ -30,6 +30,29 @@ def compute_reps(model, X, chunk_size):
         #labels.append(target.cpu().numpy())
     return np.vstack(reps)
 
+# def compute_reps(model, X, chunk_size):
+#     """Compute representations for input in chunks."""
+#     chunks = int(ceil(float(len(X)) / chunk_size))
+#     #print(chunks)
+#     reps = []
+#     labels = []
+
+#     trainloader = DataLoader(X,
+#                          batch_size=chunks,
+#                          shuffle=False,
+#                          num_workers=4)
+
+#     for batch_idx, (img, target) in tqdm(enumerate(trainloader)):
+#         img = Variable(img).cuda()
+#         #pdb.set_trace()
+#         output, train_features, _ = model(img)
+#         #train_features = model(img)
+#         embeddings = output.data
+#         #pdb.set_trace()
+#         reps.append(embeddings.cpu().numpy())
+#         #labels.append(target.cpu().numpy())
+#     return np.vstack(reps)
+
 class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
     def __init__(self, labels, k, m, d):
@@ -37,7 +60,11 @@ class ClusterBatchBuilder(object):
         if isinstance(labels, np.ndarray):
             self.num_classes = np.unique(labels).shape[0]
             self.labels = labels
+        elif isinstance(labels, list):
+            self.num_classes = np.unique(labels).shape[0]
+            self.labels = np.array(labels)
         else:
+            #pdb.set_trace()
             self.num_classes = np.unique(labels.numpy()).shape[0]
             self.labels = labels.numpy()
 
@@ -49,6 +76,8 @@ class ClusterBatchBuilder(object):
 
         if isinstance(labels, np.ndarray):
             self.assignments = np.zeros_like(labels, int)
+        elif isinstance(labels, list):
+            self.assignments = np.zeros_like(np.array(labels), int)
         else:
             self.assignments = np.zeros_like(labels.numpy(), int)
                         
@@ -57,6 +86,7 @@ class ClusterBatchBuilder(object):
         self.example_losses = None
         self.cluster_losses = None
         self.has_loss = None
+        #pdb.set_trace()
 
 
     def update_clusters(self, rep_data, max_iter=20):
@@ -68,29 +98,29 @@ class ClusterBatchBuilder(object):
 
         # Lazily allocate array of zeroes as placeholders for centroids 
         if self.centroids is None:
+            #pdb.set_trace()
             self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
 
         #pdb.set_trace()
 
-        for c in range(self.num_classes):
+        for class_idx in range(self.num_classes):
 
-            class_mask = self.labels == c # Boolean mask for selecting examples
-            #pdb.set_trace()
+            class_mask = self.labels == class_idx # Boolean mask for selecting examples
 
             class_examples = rep_data[class_mask] # Mask features based on the class mask
-            #pdb.set_trace()
+ 
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
             kmeans.fit(class_examples)
             #pdb.set_trace()
 
             # Save cluster centroids for finding impostor clusters
-            start = self.get_cluster_ind(c, 0)
-            stop = self.get_cluster_ind(c, self.k)
+            start = self.get_cluster_ind(class_idx, 0)
+            stop = self.get_cluster_ind(class_idx, self.k)
             self.centroids[start:stop] = kmeans.cluster_centers_ # Should create self.k * self.num_classes number of centroids
             #pdb.set_trace()
 
             # Update assignments with new global cluster indexes
-            self.assignments[class_mask] = self.get_cluster_ind(c, kmeans.predict(class_examples))
+            self.assignments[class_mask] = self.get_cluster_ind(class_idx, kmeans.predict(class_examples))
             #pdb.set_trace()
 
         # Construct a map from cluster to example indexes for fast batch creation
@@ -118,7 +148,7 @@ class ClusterBatchBuilder(object):
         # Update example losses
         losses = losses.data.cpu().numpy()
         #pdb.set_trace()
-
+        self.losses = losses
         self.example_losses[indexes] = losses
         self.has_loss[indexes] = losses
 
@@ -130,6 +160,7 @@ class ClusterBatchBuilder(object):
             cluster_inds_mask = self.assignments == cluster
             cluster_example_losses = self.example_losses[cluster_inds_mask]
 
+            #pdb.set_trace()
             # TODO add a another variable for getting the losses for the cluster later on in gen_batch
             self.cluster_ex_losses[cluster] = cluster_example_losses
             #pdb.set_trace()
@@ -202,7 +233,7 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
         return batch_indexes, np.repeat(batch_class_inds, self.d)
 
-    def gen_batch_spl(self, lambda_param, gamma_param):
+    def gen_batch_spl(self, max_pos_len, lambda_param, diversity_ratio):
         """
         Generate batch from DML for the SPL framework
 
@@ -230,33 +261,79 @@ class ClusterBatchBuilder(object):
 
         selected_samples_idx = np.zeros(len(self.labels), int)
         selected_scores = np.zeros(len(self.labels), float)
-
         pos_count = 0
         neg_count = 0
         total_count = 0
-        for j, cluster in enumerate(clusters):
-            # TODO make sure idx_incluster and loss_incluster lengths are the same
+        #for cluster in range(self.num_classes*self.k):
+        #for j, cluster in enumerate(clusters):
+        for cluster in range(self.num_classes*self.k):
             idx_incluster = self.cluster_assignments[cluster]
-            #loss_incluster = (self.cluster_ex_losses[cluster] - np.max(self.cluster_ex_losses[cluster]))/-np.ptp(self.cluster_ex_losses[cluster])
             loss_incluster = np.sort(self.cluster_ex_losses[cluster])
-            loss_incluster = (loss_incluster - np.max(loss_incluster))/-np.ptp(loss_incluster)
-            rank_incluster = np.sort(np.argsort(loss_incluster)) + 1
+            rank_incluster = np.sort(np.argsort(loss_incluster))
+
+            sort_idx = np.argsort(loss_incluster)
+            #total_count += 1
+            loss_incluster[sort_idx] -= diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster))
+
+            K = min([max_pos_len, len(loss_incluster)])
+            #selected_samples_idx[idx_incluster[np.argpartition(loss_incluster, K)[:K]]] = 1
+            selected_samples_idx[idx_incluster[:K]] = 1
             #pdb.set_trace()
 
-            for i in range(len(loss_incluster)):
-                #pdb.set_trace()
-                total_count += 1
-                if(loss_incluster[i] < lambda_param + gamma_param / ((np.sqrt(rank_incluster[i]) + np.sqrt(rank_incluster[i]-1)))):
-                    pos_count += 1
-                    selected_samples_idx[idx_incluster[i]] = 1
-                else:
-                    neg_count += 1
-                    selected_samples_idx[idx_incluster[i]] = 0
-            selected_scores[idx_incluster[i]] = loss_incluster[i] - lambda_param - gamma_param /(np.sqrt(rank_incluster[i])+np.sqrt(rank_incluster[i]-1))
-            #pdb.set_trace()
         selected_samples_idx = np.where(selected_samples_idx == 1)
-        sortedselected_idx = np.take(selected_scores, selected_samples_idx)
+            #grouploss_threshold = np.vstack((loss_incluster[sort_idx], grouped_threshold))
+            #pdb.set_trace()
+
+            #loss_incluster[sort_idx] -= gamma_param / ((np.sqrt(range(1, 1+len(idx_incluser))) + np.sqrt(range(len(idx_incluser)))))
+            #pdb.set_trace()
+            #for i in range(1, len(loss_incluster)):
+            #    loss_incluster[i] - lambda_param - gamma_param/(np.sqrt(rank_incluster[i])+np.sqrt(rank_incluster[i]-1))
+            # for i in range(1, len(loss_incluster)):
+            #     #print(len(idx_incluster))
+            #     #print(len(loss_incluster))
+            #     if(loss_incluster[i] < min(self.losses) + lambda_param / ((np.sqrt(rank_incluster[i]) + np.sqrt(rank_incluster[i]-1)))):
+            #         pos_count += 1
+            #         selected_samples_idx[idx_incluster[i]] = 1
+            #     else:
+            #         neg_count += 1
+            #         selected_samples_idx[idx_incluster[i]] = 0
+            #selected_scores[idx_incluster[i]] = loss_incluster[i] - lambda_param - gamma_param /(np.sqrt(rank_incluster[i])+np.sqrt(rank_incluster[i]-1))
+            #pdb.set_trace()
+        #selected_samples_idx = np.where(selected_samples_idx == 1)
+        #sortedselected_idx = np.take(selected_scores, selected_samples_idx)
+        
+        #metric = grouploss_threshold[0] - 0.01 * grouploss_threshold[1]
         #pdb.set_trace()
+
+        # selected_samples_idx = np.zeros(len(self.labels), int)
+        # selected_scores = np.zeros(len(self.labels), float)
+
+        # pos_count = 0
+        # neg_count = 0
+        # total_count = 0
+        # for j, cluster in enumerate(clusters):
+        #     # TODO make sure idx_incluster and loss_incluster lengths are the same
+        #     idx_incluster = self.cluster_assignments[cluster]
+        #     #loss_incluster = (self.cluster_ex_losses[cluster] - np.max(self.cluster_ex_losses[cluster]))/-np.ptp(self.cluster_ex_losses[cluster])
+        #     loss_incluster = np.sort(self.cluster_ex_losses[cluster])
+        #     loss_incluster = (loss_incluster - np.max(loss_incluster))/-np.ptp(loss_incluster)
+        #     rank_incluster = np.sort(np.argsort(loss_incluster)) + 1
+        #     #pdb.set_trace()
+
+        #     for i in range(len(loss_incluster)):
+        #         #pdb.set_trace()
+        #         total_count += 1
+        #         if(loss_incluster[i] < lambda_param + gamma_param / ((np.sqrt(rank_incluster[i]) + np.sqrt(rank_incluster[i]-1)))):
+        #             pos_count += 1
+        #             selected_samples_idx[idx_incluster[i]] = 1
+        #         else:
+        #             neg_count += 1
+        #             selected_samples_idx[idx_incluster[i]] = 0
+        #     selected_scores[idx_incluster[i]] = loss_incluster[i] - lambda_param - gamma_param /(np.sqrt(rank_incluster[i])+np.sqrt(rank_incluster[i]-1))
+        #     #pdb.set_trace()
+        # selected_samples_idx = np.where(selected_samples_idx == 1)
+        # sortedselected_idx = np.take(selected_scores, selected_samples_idx)
+        # #pdb.set_trace()
         return selected_samples_idx
 
     def get_cluster_ind(self, c, i):

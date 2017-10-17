@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from torch.autograd import Variable
 from collections import OrderedDict
+import math
 
 class BasickBlock(nn.Module):
 

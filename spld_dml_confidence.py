@@ -35,8 +35,6 @@ from torchvision.datasets import MNIST, CIFAR10
 from torchvision import transforms
 import torch.backends.cudnn as cudnn
 
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-
 import visdom
 
 from utils.train_settings import parse_settings
@@ -48,6 +46,7 @@ from models.preact_resnet import PreActResNet18
 from models.resnet import ResNetCifar10
 from models.googlenet import GoogLeNet
 from models.wide_resnet import Wide_ResNet
+from models.wide_resnet_confidence import Wide_ResNet_Conf
 
 from utils.sampler import SubsetSequentialSampler
 from utils.min_max_sort import min_max_sort
@@ -75,6 +74,14 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
 	torch.cuda.manual_seed(args.seed)
+
+class StableBCELoss(nn.modules.Module):
+       def __init__(self):
+             super(StableBCELoss, self).__init__()
+       def forward(self, input, target):
+             neg_abs = - input.abs()
+             loss = input.clamp(min=0) - input * target + (1 + neg_abs.exp()).log()
+             return loss
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     """Saves checkpoint to disk"""
@@ -182,7 +189,7 @@ def validate(model, testloader, optimizer, updates):
 		img = Variable(img, volatile=True).cuda()
 		target = Variable(target, volatile=True).cuda(async=True)
 
-		output, _ = model(img)
+		output, _, confidence = model(img)
 
 		# Compute the loss for each sample in the minibatch
 		onehot_target = Variable(encode_onehot(target, args.num_classes))
@@ -218,8 +225,8 @@ def validate(model, testloader, optimizer, updates):
 					'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
 					'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
 					'Prec@1 {accs.val:.3f} ({accs.avg:.3f})'.format(
-					batch_idx, len(testloader), batch_time=batch_time, loss=losses,
-					accs=accs))
+						batch_idx, len(testloader), batch_time=batch_time, loss=losses,
+						accs=accs))
 
 
 	# log avg values to somewhere
@@ -231,12 +238,14 @@ def validate(model, testloader, optimizer, updates):
 		plotter.plot('acc', 'test', updates, accs.avg)
 		plotter.plot('loss', 'test', updates, losses.avg)
 
-def train(model, batch_builder, trainloader, trainset, n_train, optimizer, iteration, n_steps, updates, batch_train_inds):
+def train(model, batch_builder, trainloader, trainset, n_train, optimizer, iteration, n_steps, updates, batch_train_inds, confidence_criterion):
 	#adjust_learning_rate(optimizer, i+1)
 	loss_vec = numpy.array([])
 	batch_time = AverageMeter()
 	losses = AverageMeter()
 	accs = AverageMeter()
+
+	confidence_loss_weighting = 0.1
 
     # switch to train mode
 	model.train()
@@ -247,13 +256,21 @@ def train(model, batch_builder, trainloader, trainset, n_train, optimizer, itera
 	for batch_idx, (img, target) in tqdm(enumerate(trainloader)):
 		img = Variable(img).cuda()
 		target = Variable(target).cuda(async=True)
+		confidence_labels = Variable(torch.ones(target.size())).cuda(async=True)
 
 		optimizer.zero_grad()
-		output, features = model(img)
+
+		# Get confidence
+		output, features, confidence = model(img)
+		pdb.set_trace()
 
 		# Compute the loss for each sample in the minibatch
 		onehot_target = Variable(encode_onehot(target, args.num_classes))
-		xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(output))
+
+		pred_conf = output * (0.8 * confidence.expand_as(output) + 0.1) + onehot_target * (1 - (0.8 * confidence.expand_as(onehot_target) + 0.1))
+		pred_conf = torch.log(pred_conf)
+
+		xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(pred_conf))
                                                             * onehot_target,
                                                         dim=1,
                                                         keepdim=True)
@@ -264,8 +281,18 @@ def train(model, batch_builder, trainloader, trainset, n_train, optimizer, itera
 		xentropy_loss_vector_sum = xentropy_loss_vector.sum()
 		xentropy_loss_vector_mean = xentropy_loss_vector.mean()
 
+		confidence_loss = confidence_criterion(confidence, confidence_labels)
+
+		if args.budget > confidence_loss.data[0]:
+			confidence_loss_weighting = confidence_loss_weighting * 0.98
+		elif args.budget <= confidence_loss.data[0]:
+			confidence_loss_weighting = confidence_loss_weighting * 1.02
+
+		total_loss = xentropy_loss_vector_mean + confidence_loss * confidence_loss_weighting
+		pdb.set_trace()
+
 		# Backward
-		xentropy_loss_vector_sum.backward()
+		total_loss.backward()
 		optimizer.step()
 
 		# measure elapsed time
@@ -275,6 +302,7 @@ def train(model, batch_builder, trainloader, trainset, n_train, optimizer, itera
 		# measure accuracy and record loss
 		prec1 = accuracy(output.data, target.data, topk=(1,))[0]
 		losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
+		confident_losses.update(confident_loss.data[0], img.size(0))
 		accs.update(prec1[0], img.size(0))
 
 		if batch_idx % args.print_freq == 0:
@@ -370,7 +398,8 @@ def main(trainloader, trainset, testloader, n_train):
 			#model = ResNetCifar10()
 			#model = GoogLeNet()
 			#model = LeNetCifar10()
-			model = Wide_ResNet(28, 10, 0.3, 10)
+			#model = Wide_ResNet(28, 10, 0.3, 10)
+			model = Wide_ResNet_Conf(28, 10, 0.3, 10)
 			model.cuda()
 			model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
 			cudnn.benchmark = True
@@ -383,12 +412,12 @@ def main(trainloader, trainset, testloader, n_train):
 			print(model)
 
 		criterion = nn.CrossEntropyLoss(size_average=False)
+		confidence_criterion = nn.BCELoss()
 
 		if args.cifar10:
 			optimizer = optim.SGD(model.parameters(),
 	                              lr=learning_rate,
 	                              momentum=momentum,
-	                              nesterov=True,
 	                              weight_decay=args.weight_decay)
 
 		if args.mnist:
@@ -440,7 +469,8 @@ def main(trainloader, trainset, testloader, n_train):
 						i, 
 						n_steps, 
 						updates,
-						batch_train_inds)
+						batch_train_inds,
+						confidence_criterion)
 
 			if i > 0:
 				# evaluate on validation set
@@ -456,12 +486,8 @@ def main(trainloader, trainset, testloader, n_train):
 					'best_prec1': best_prec1,
 				}, is_best)
 
-			if i % 10 == 0:
-				print("Refreshing clusters")
-				reps = compute_reps(model, trainset, 400)
-				batch_builder.update_clusters(reps)
-
 		print ('Best accuracy: ', best_prec1)
+
 		exit()
 		# for i in tqdm(range(n_steps)):
 

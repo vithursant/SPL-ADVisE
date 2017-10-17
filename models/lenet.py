@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.init as init
 
 # Build Network
 class LeNet(nn.Module):
@@ -139,3 +140,39 @@ class FashionLeNet(nn.Module):
 
 	def name(self):
 		return 'fashionlenet'
+
+class LeNetCifar10(nn.Module):
+    def __init__(self):
+        super(LeNetCifar10, self).__init__()
+        # 1 input image channel, 6 output channels, 5x5 square convolution
+        # kernel
+        self.conv1 = nn.Conv2d(3, 32, (3, 3), padding=1)
+        init.kaiming_normal(self.conv1.weight)
+        self.conv1_bn = nn.BatchNorm2d(32)
+        self.dropout1 = nn.Dropout2d(0.5)
+        # an affine operation: y = Wx + b
+        self.fc1 = nn.Linear(32 * 16 * 16, 512)
+        init.kaiming_normal(self.fc1.weight)
+        self.fc1_bn = nn.BatchNorm1d(512)
+        self.fc1_dropout = nn.Dropout2d(0.5)
+        self.fc2 = nn.Linear(512, 10)
+        init.kaiming_normal(self.fc2.weight)
+
+    def forward(self, x):
+        # Max pooling over a (2, 2) window
+        x = F.max_pool2d(F.relu(self.conv1_bn(self.conv1(x))), (2, 2))
+        x = self.dropout1(x)
+        # If the size is a square you can only specify a single number
+        x = x.view(-1, self.num_flat_features(x))
+        features = x
+        x = F.relu(self.fc1_bn(self.fc1(x)))
+        x = self.fc1_dropout(x)
+        x = self.fc2(x)
+        return x, features
+
+    def num_flat_features(self, x):
+        size = x.size()[1:]  # all dimensions except the batch dimension
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features

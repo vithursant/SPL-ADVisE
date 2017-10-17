@@ -82,12 +82,28 @@ def load_dataset(args):
 							   transform=transform,
 							   download=True)
 
+	# # Self-Paced Learning Enabled
+	# if args.spld:
+	# 	train_idx = numpy.arange(len(trainset))
+	# 	numpy.random.shuffle(train_idx)
+	# 	n_train = len(train_idx) 
+	# 	train_sampler = SubsetSequentialSamplerSPLD(train_idx.tolist())
+	# 	trainloader = DataLoader(trainset,
+	# 							 batch_size=args.batch_size,
+	# 							 shuffle=False,
+	# 							 num_workers=4,
+	# 							 sampler=train_sampler)
+
+	# 	testloader = DataLoader(testset,
+	# 							batch_size=args.batch_size,
+	# 							shuffle=False,
+	# 							num_workers=4)
 	# Self-Paced Learning Enabled
 	if args.spld:
 		train_idx = numpy.arange(len(trainset))
-		numpy.random.shuffle(train_idx)
+		#numpy.random.shuffle(train_idx)
 		n_train = len(train_idx) 
-		train_sampler = SubsetSequentialSamplerSPLD(train_idx.tolist())
+		train_sampler = SubsetSequentialSamplerSPLDML(range(len(trainset)), range(len(trainset)))
 		trainloader = DataLoader(trainset,
 								 batch_size=args.batch_size,
 								 shuffle=False,
@@ -96,7 +112,7 @@ def load_dataset(args):
 
 		testloader = DataLoader(testset,
 								batch_size=args.batch_size,
-								shuffle=False,
+								shuffle=True,
 								num_workers=4)
 	elif args.spldml:
 		n_train = len(trainset)
