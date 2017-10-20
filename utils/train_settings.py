@@ -1,7 +1,9 @@
 import argparse
 
 def parse_settings():
-
+	model_names = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'wideresnet', 'googlenet', 'lenet', 'fashionlenet']
+	dataset_names = ['cifar10', 'cifar100', 'svhn', 'fashionmnist', 'mnist', 'fashionlenet']
+	
 	# Training settings
 	parser = argparse.ArgumentParser(description='PyTorch MNIST SPLD')
 	#print(parser)
@@ -47,10 +49,12 @@ def parse_settings():
 						help='Enables the magnet loss for representation learning')
 	parser.add_argument('--mnist', action='store_true', default=False,
 						help='Use the mnist dataset')
+	parser.add_argument('--svhn', action='store_true', default=False,
+						help='Use the SVHN dataset')
+	parser.add_argument('--fashionmnist', action='store_true', default=False,
+						help='Use the Fashion MNIST dataset')
 	parser.add_argument('--cifar10', action='store_true', default=False,
 						help='Use the CIFAR-10 dataset')
-	parser.add_argument('--fashionmnist', action='store_true', default=False,
-						help='Use the Fasnion MNIST dataset')
 	parser.add_argument('--name', default='SPLD', type=str,
 						help='name of experiment')
 	parser.add_argument('--visdom', dest='visdom', action='store_true', default=False,
@@ -77,5 +81,15 @@ def parse_settings():
 	parser.add_argument('--depth', default=28, type=int, help='depth of model')
 	parser.add_argument('--widen-factor', default=10, type=int, help='width of model')
 	parser.add_argument('--dropout', default=0.3, type=float, help='dropout_rate')
-	
+
+	parser.add_argument('-lr_decay_ratio', default=0.1)
+	parser.add_argument('-lr_patience', default=10)
+	parser.add_argument('-lr_threshold', default=0.02)
+	parser.add_argument('-lr_delay', default=5)
+	parser.add_argument('--folder', '-f', default='baseline', choices=['baseline', 'final_tests'])
+
+	parser.add_argument('--test_id', type=int, default=0, metavar='N', help='test id number to be used for filenames')
+
+	parser.add_argument('--model', '-a', metavar='ARCH', default='resnet18', choices=model_names)
+	parser.add_argument('--dataset', '-d', metavar='D', default='cifar10', choices=dataset_names)
 	return parser.parse_args()

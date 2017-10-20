@@ -101,20 +101,20 @@ class PreActResNet(nn.Module):
         return 'PreActResNet'
 
 
-def PreActResNet18():
-    return PreActResNet(PreActBlock, [2,2,2,2])
+def PreActResNet18(**kwargs):
+    return PreActResNet(PreActBlock, [2,2,2,2], **kwargs)
 
-def PreActResNet34():
-    return PreActResNet(PreActBlock, [3,4,6,3])
+def PreActResNet34(**kwargs):
+    return PreActResNet(PreActBlock, [3,4,6,3], **kwargs)
 
-def PreActResNet50():
-    return PreActResNet(PreActBottleneck, [3,4,6,3])
+def PreActResNet50(**kwargs):
+    return PreActResNet(PreActBottleneck, [3,4,6,3], **kwargs)
 
-def PreActResNet101():
-    return PreActResNet(PreActBottleneck, [3,4,23,3])
+def PreActResNet101(**kwargs):
+    return PreActResNet(PreActBottleneck, [3,4,23,3], **kwargs)
 
-def PreActResNet152():
-    return PreActResNet(PreActBottleneck, [3,8,36,3])
+def PreActResNet152(**kwargs):
+    return PreActResNet(PreActBottleneck, [3,8,36,3], **kwargs)
 
 
 def test():

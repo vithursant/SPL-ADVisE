@@ -7,3 +7,4 @@ losses/
 __pycache__
 *.py~
 runs/
+results/
