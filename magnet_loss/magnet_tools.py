@@ -83,7 +83,8 @@ class ClusterBatchBuilder(object):
                         
         self.cluster_assignments = {}
         self.cluster_classes = np.repeat(range(self.num_classes), k)
-        self.example_losses = None
+        self.magnet_example_losses = None
+        self.spld_example_losses = None
         self.cluster_losses = None
         self.has_loss = None
         #pdb.set_trace()
@@ -131,26 +132,29 @@ class ClusterBatchBuilder(object):
             #pdb.set_trace()
         #pdb.set_trace()
 
-    def update_losses(self, indexes, losses):
+    def update_losses(self, indexes, losses, loss_type):
         """
         Given a list of examples indexes and corresponding losses
         store the new losses and update corresponding cluster losses.
         """
         # Lazily allocate structures for losses
-        if self.example_losses is None:
-            self.example_losses = np.zeros_like(self.labels, float)
+        if self.magnet_example_losses is None or self.spld_example_losses is None:
+            self.magnet_example_losses = np.zeros_like(self.labels, float)
+            self.spld_example_losses = np.zeros_like(self.labels, float)
             self.cluster_losses = np.zeros([self.k * self.num_classes], float)
-            #self.cluster_ex_losses = np.zeros([self.k * self.num_classes], float)
-            self.cluster_ex_losses = [None] * (self.k * self.num_classes)
-            self.cluster_ex_losses_idx = [None] * (self.k * self.num_classes)
+
             self.has_loss = np.zeros_like(self.labels, bool)
+            self.spld_cluster_ex_losses = [None] * (self.k * self.num_classes)
 
         # Update example losses
-        losses = losses.data.cpu().numpy()
-        #pdb.set_trace()
-        self.losses = losses
-        self.example_losses[indexes] = losses
-        self.has_loss[indexes] = losses
+        if loss_type == "magnet":
+            magnet_losses = losses.data.cpu().numpy()
+            self.magnet_example_losses[indexes] = magnet_losses
+            self.has_loss[indexes] = magnet_losses
+
+        if loss_type == "spld":
+            spld_losses = losses.data.cpu().numpy()
+            self.spld_example_losses[indexes] = spld_losses
 
         # Find affected clusters and update the corresponding cluster losses
         # Gets the clusters in which the lossses belong to
@@ -158,16 +162,18 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
         for cluster in clusters:
             cluster_inds_mask = self.assignments == cluster
-            cluster_example_losses = self.example_losses[cluster_inds_mask]
 
-            #pdb.set_trace()
-            # TODO add a another variable for getting the losses for the cluster later on in gen_batch
-            self.cluster_ex_losses[cluster] = cluster_example_losses
-            #pdb.set_trace()
+            if loss_type == "magnet":
+                cluster_example_losses = self.magnet_example_losses[cluster_inds_mask]
 
-            # Take the average closs in the cluster of examples for which we have measured a loss
-            # Array of clusters with their average example loss
-            self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds_mask]]) # gets the losses within the cluster and calculates the mean
+            if loss_type == "spld":
+                cluster_example_losses = self.spld_example_losses[cluster_inds_mask]
+                self.spld_cluster_ex_losses[cluster] = cluster_example_losses
+
+            if loss_type == "magnet":
+                # Take the average closs in the cluster of examples for which we have measured a loss
+                # Array of clusters with their average example loss
+                self.cluster_losses[cluster] = np.mean(cluster_example_losses[self.has_loss[cluster_inds_mask]]) # gets the losses within the cluster and calculates the mean
 
     def gen_batch(self):
         """
@@ -233,54 +239,38 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
         return batch_indexes, np.repeat(batch_class_inds, self.d)
 
-    def gen_batch_spl(self, max_pos_len, lambda_param, diversity_ratio):
+    def gen_batch_spl(self, max_pos_len, diversity_ratio, batch_size):
         """
         Generate batch from DML for the SPL framework
-
-        TODO:
-            1. Do a forward/backward pass and get the loss for all the
-            samples in the dataset
-            2. Update the clusters with the losses
-            3. Generate a batch based on the loss, go through each cluster
-            select samples based on "easiness"
         """
-        seed_cluster = np.random.choice(self.num_classes * self.k)
-
-        # Get imposter clusters
-        sq_dists = ((self.centroids[seed_cluster] - self.centroids) ** 2).sum(axis=1)
-
-        # Assure only clusters of different class from seed are chosen
-        sq_dists[self.get_class_ind(seed_cluster) == self.cluster_classes] = np.inf
-
-        # Get top imposter clusters and add seed
-        clusters = np.argpartition(sq_dists, self.m-1)[:self.m-1]
-        clusters = np.concatenate([[seed_cluster], clusters])
 
         # Sample examples using SPLD
-        batch_indexes = np.zeros([self.m * self.d], int)
-
         selected_samples_idx = np.zeros(len(self.labels), int)
         selected_scores = np.zeros(len(self.labels), float)
-        pos_count = 0
-        neg_count = 0
-        total_count = 0
-        #for cluster in range(self.num_classes*self.k):
-        #for j, cluster in enumerate(clusters):
+
         for cluster in range(self.num_classes*self.k):
             idx_incluster = self.cluster_assignments[cluster]
-            loss_incluster = np.sort(self.cluster_ex_losses[cluster])
-            rank_incluster = np.sort(np.argsort(loss_incluster))
+            loss_incluster = np.sort(self.spld_cluster_ex_losses[cluster])
+            rank_incluster = np.sort(np.argsort(loss_incluster))+1
 
             sort_idx = np.argsort(loss_incluster)
             #total_count += 1
-            loss_incluster[sort_idx] -= diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster))
+            loss_incluster[sort_idx] -= diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster-1))
 
             K = min([max_pos_len, len(loss_incluster)])
             #selected_samples_idx[idx_incluster[np.argpartition(loss_incluster, K)[:K]]] = 1
             selected_samples_idx[idx_incluster[:K]] = 1
+            #selected_samples_idx[idx_incluster[:len(loss_incluster)-1]] = 1
+            #m = torch.distributions.Normal(torch.Tensor(diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster-1))), torch.Tensor([1.0]))
             #pdb.set_trace()
-
         selected_samples_idx = np.where(selected_samples_idx == 1)
+
+        left_over = len(selected_samples_idx[0]) % batch_size
+
+        if left_over > 0:
+            selected_samples_idx = np.append(selected_samples_idx[0], np.random.choice(range(len(self.labels)), batch_size - left_over, replace=False))
+        else:
+            selected_samples_idx = selected_samples_idx[0]
             #grouploss_threshold = np.vstack((loss_incluster[sort_idx], grouped_threshold))
             #pdb.set_trace()
 

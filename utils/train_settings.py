@@ -25,6 +25,8 @@ def parse_settings():
 	                    help='how many batches to wait before logging training status')
 	parser.add_argument('--spl', action='store_true', default=False,
 						help='enables self-paced learning framework')
+	parser.add_argument('--stratified', action='store_true', default=False,
+						help='enables stratified sampling')
 	parser.add_argument('--spld', action='store_true', default=False,
 						help='enables self-paced learning with diversity')
 	parser.add_argument('--spldml', action='store_true', default=False,
@@ -55,6 +57,8 @@ def parse_settings():
 						help='Use the Fashion MNIST dataset')
 	parser.add_argument('--cifar10', action='store_true', default=False,
 						help='Use the CIFAR-10 dataset')
+	parser.add_argument('--cifar100', action='store_true', default=False,
+						help='Use the CIFAR-100 dataset')
 	parser.add_argument('--name', default='SPLD', type=str,
 						help='name of experiment')
 	parser.add_argument('--visdom', dest='visdom', action='store_true', default=False,
@@ -81,7 +85,8 @@ def parse_settings():
 	parser.add_argument('--depth', default=28, type=int, help='depth of model')
 	parser.add_argument('--widen-factor', default=10, type=int, help='width of model')
 	parser.add_argument('--dropout', default=0.3, type=float, help='dropout_rate')
-
+	parser.add_argument('--shallow', action='store_true', default=False,
+						help='Enable shallow network magnet loss')
 	parser.add_argument('-lr_decay_ratio', default=0.1)
 	parser.add_argument('-lr_patience', default=10)
 	parser.add_argument('-lr_threshold', default=0.02)

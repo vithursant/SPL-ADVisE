@@ -34,7 +34,7 @@ from torch.utils.data import DataLoader
 from torch import optim
 
 import torchvision
-from torchvision.datasets import MNIST, CIFAR10
+from torchvision.datasets import MNIST, CIFAR10, CIFAR100
 from torchvision import transforms
 import torch.backends.cudnn as cudnn
 
@@ -305,8 +305,7 @@ def train(model, batch_builder, trainloader, trainset, n_train, optimizer, itera
 
 		# Compute the loss for each sample in the minibatch
 		onehot_target = Variable(encode_onehot(target, args.num_classes))
-		xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(output))
-                                                            * onehot_target,
+		xentropy_loss_vector = -1 * torch.sum(torch.log(F.softmax(output)) * onehot_target,
                                                         dim=1,
                                                         keepdim=True)
 
@@ -349,7 +348,7 @@ def train(model, batch_builder, trainloader, trainset, n_train, optimizer, itera
 		stop = start + img.size(0)
 		updates += 1
 		batch_builder.update_losses(batch_train_inds[start:stop],
-								xentropy_loss_vector.squeeze())
+								xentropy_loss_vector.squeeze(), 'spld')
 
 	batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], spld_params[2])
 
@@ -424,12 +423,11 @@ def train_random(model, trainloader, trainset, n_train, optimizer, iteration, n_
 					loss=losses, accs=accs))
 
 		# Compute training accuracy
-		#_, predict = torch.max(output, 1)
+		_, predict = torch.max(output, 1)
+		train_accuracy = (target == predict.squeeze()).float().mean()
 
-		#train_accuracy = (target == predict.squeeze()).float().mean()
-
-		#losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
-		#accs.update(train_accuracy.data[0], img.size(0))
+		losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
+		accs.update(train_accuracy.data[0], img.size(0))
 
 		updates += 1
 
@@ -473,16 +471,16 @@ def validate_random(model, testloader, optimizer, updates):
 		xentropy_loss_vector_sum = xentropy_loss_vector.sum()
 		xentropy_loss_vector_mean = xentropy_loss_vector.mean()
 
-		#_, predict = torch.max(output, 1)
-		#test_accuracy = (target == predict.squeeze()).float().mean()
+		_, predict = torch.max(output, 1)
+		test_accuracy = (target == predict.squeeze()).float().mean()
 
         # measure accuracy and record loss
-		prec1 = accuracy(output.data, target.data, topk=(1,))[0]
-		losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
-		accs.update(prec1[0], img.size(0))
-
-		#accs.update(test_accuracy.data[0], img.size(0))
+		#prec1 = accuracy(output.data, target.data, topk=(1,))[0]
 		#losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
+		#accs.update(prec1[0], img.size(0))
+
+		accs.update(test_accuracy.data[0], img.size(0))
+		losses.update(xentropy_loss_vector_sum.data[0], img.size(0))
 
 		# measure elapsed time
 		batch_time.update(time.time() - end)
@@ -517,7 +515,7 @@ def main(trainloader, trainset, testloader, n_train):
 	'''
 	# Enabled SPLD
 	#print(train_idx)
-	CUDA_VISIBLE_DEVICES=1,2
+	CUDA_VISIBLE_DEVICES=0,1,2
 	#exit()
 	best_prec1 = 0
 	learning_rate = args.lr
@@ -552,49 +550,49 @@ def main(trainloader, trainset, testloader, n_train):
 		num_classes = 100
 
 	if args.model == 'resnet18':
-		model = PreActResNet18(num_classes=num_classes)
+		deep_model = PreActResNet18(num_classes=num_classes)
 	elif args.model == 'resnet34':
-		model = PreActResNet34(num_classes=num_classes)
+		deep_model = PreActResNet34(num_classes=num_classes)
 	elif args.model == 'resnet50':
-		model = PreActResNet50(num_classes=num_classes)
+		deep_model = PreActResNet50(num_classes=num_classes)
 	elif args.model == 'resnet101':
-		model = PreActResNet101(num_classes=num_classes)
+		deep_model = PreActResNet101(num_classes=num_classes)
 	elif args.model == 'resnet152':
-		model = PreActResNet152(num_classes=num_classes)
+		deep_model = PreActResNet152(num_classes=num_classes)
 	elif args.model == 'google':
-		model = GoogLeNet()
+		deep_model = GoogLeNet()
 	elif args.model == 'wideresnet':
 		if args.dataset == 'cifar10':
-			model = Wide_ResNet(depth=28, widen_factor=10, dropout_rate=0.3, num_classes=num_classes)
+			deep_model = Wide_ResNet(depth=28, widen_factor=10, dropout_rate=0.3, num_classes=num_classes)
 		if args.dataset == 'svhn':
-			model = Wide_ResNet(depth=16, widen_factor=8, dropout_rate=args.dropout, num_classes=num_classes)	
+			deep_model = Wide_ResNet(depth=16, widen_factor=8, dropout_rate=args.dropout, num_classes=num_classes)	
 	elif args.model == 'lenet':
-		model = LeNet()
+		deep_model = LeNet()
 	elif args.model == 'fashionlenet':
-		model = FashionLeNet()
+		deep_model = FashionLeNet()
 
-	model.cuda()
+	deep_model.cuda()
 
-	if args.dataset == 'cifar10' or args.dataset == 'svhn':
-		model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+	if args.dataset in ['cifar10', 'svhn', 'cifar100']:
+		deep_model = torch.nn.DataParallel(deep_model, device_ids=range(torch.cuda.device_count()))
 		cudnn.benchmark = True
 
-	print(model)
+	print(deep_model)
 
 	global plotter
 	plotter = VisdomLinePlotter(env_name=args.name)
 
 	criterion = nn.CrossEntropyLoss(size_average=False)
 
-	if args.dataset == 'cifar10' or args.dataset == 'svhn':
-		optimizer = optim.SGD(model.parameters(),
+	if args.dataset in ['cifar10', 'svhn', 'cifar100']:
+		optimizer = optim.SGD(deep_model.parameters(),
                               lr=args.lr,
-                              momentum=momentum,
+                              momentum=args.momentum,
                               nesterov=True,
                               weight_decay=args.weight_decay)
 
-	if args.dataset == 'mnist' or args.dataset == 'fashionmnist':
-		optimizer = optim.SGD(model.parameters(),
+	if args.dataset in ['mnist', 'fashionmnist']:
+		optimizer = optim.SGD(deep_model.parameters(),
                               lr=learning_rate,
                               momentum=momentum)
 	if args.spl:
@@ -602,23 +600,24 @@ def main(trainloader, trainset, testloader, n_train):
 		#spld_params = [50, 1e-3, 5e-2, 1e-1]
 		global spld_params 
 
-		if args.dataset == 'cifar10' or args.dataset == 'svhn':
-			spld_params = [50, 4e-1, 1e-1, 1e-1]
-		if args.dataset == 'mnist' or args.dataset == 'fashionmnist':
-			spld_params = [50, 4e-1, 1e-1, 1e-1]
+		if args.dataset in ['cifar10', 'svhn', 'cifar100']:
+			spld_params = [500, 4e-1, 1e-1, 1e-1]
+			#spld_params = [500, 1e-3, 5e-2, 5e-1]
+		if args.dataset in ['mnist', 'fashionmnist']:
+			spld_params = [5000, 1e-3, 5e-2, 1e-1]
 
 		#criterion = nn.CrossEntropyLoss(size_average=False)
 
 		# Create batcher
 		#labels = getattr(trainset, 'train_labels')
 
-		if args.dataset == "svhn":
+		if args.dataset in ['svhn']:
 			labels = trainset.labels
 		else:
 			labels = getattr(trainset, 'train_labels')
 		#pdb.set_trace()
 
-		initial_reps = compute_reps(model, trainset, 400)
+		initial_reps = compute_reps(deep_model, trainset, 400)
 
 		batch_builder = ClusterBatchBuilder(labels, k, m, d)
 		batch_builder.update_clusters(initial_reps)
@@ -628,7 +627,7 @@ def main(trainloader, trainset, testloader, n_train):
 		accs = AverageMeter()
 		batch_losses = []
 
-		_ = model.train()
+		_ = deep_model.train()
 		updates = 0
 
 		#if args.dataset == 'cifar10' or args.dataset == 'svhn':
@@ -645,7 +644,7 @@ def main(trainloader, trainset, testloader, n_train):
 				batch_train_inds = np.arange(len(trainset))
 				trainloader.sampler.batch_indices = batch_train_inds
 
-			updates, batch_train_inds, accs_avg, train_loss = train(model,
+			updates, batch_train_inds, accs_avg, train_loss = train(deep_model,
 															batch_builder,
 															trainloader, 
 															trainset, 
@@ -658,7 +657,7 @@ def main(trainloader, trainset, testloader, n_train):
 
 			if i > 0:
 				# evaluate on validation set
-				prec1, test_loss = validate(model, testloader, optimizer, updates)
+				prec1, test_loss = validate(deep_model, testloader, optimizer, updates)
 
 				row = {'updates': str(updates), 
 						'train_acc': str(accs_avg), 
@@ -674,31 +673,34 @@ def main(trainloader, trainset, testloader, n_train):
 
 				save_checkpoint({
 					'epoch': updates + 1,
-					'state_dict': model.state_dict(),
+					'state_dict': deep_model.state_dict(),
 					'best_prec1': best_prec1,
 				}, is_best)
 
-			if i % 10 == 0:
-				print("Refreshing clusters")
-				reps = compute_reps(model, trainset, 400)
-				batch_builder.update_clusters(reps)
+			#if i % 10 == 0:
+			#	print("Refreshing clusters")
+			#	reps = compute_reps(model, trainset, 400)
+			#	batch_builder.update_clusters(reps)
 
-			if updates >= 7500:
-				optimizer.param_groups[0]['lr'] = 0.0001
+			# if args.dataset == 'cifar10':
+			# 	if updates >= 7500:
+			# 		optimizer.param_groups[0]['lr'] = 0.0001
+			# 	if updates >= 12000:
+			# 		optimizer.param_groups[0]['lr'] = 0.00001
 
 		print ('Best accuracy: ', best_prec1)
 		csv_logger.close()
 	else:
 
 		if args.dataset == 'cifar10':
-			optimizer = optim.SGD(model.parameters(),
-	                              lr=learning_rate,
-	                              momentum=momentum,
+			optimizer = optim.SGD(deep_model.parameters(),
+	                              lr=args.lr,
+	                              momentum=args.momentum,
 	                              nesterov=True,
 	                              weight_decay=args.weight_decay)
 
 		if args.dataset == 'mnist' or args.dataset == 'fashionmnist':
-			optimizer = optim.SGD(model.parameters(),
+			optimizer = optim.SGD(deep_model.parameters(),
 	                              lr=learning_rate,
 	                              momentum=momentum)
 
@@ -707,11 +709,13 @@ def main(trainloader, trainset, testloader, n_train):
 		accs = AverageMeter()
 		batch_losses = []
 
-		_ = model.train()
+		_ = deep_model.train()
 		updates = 0
 
-		for i in tqdm(range(n_steps)):
-			updates, accs_avg, train_loss = train_random(model,
+		epochs = [60, 120, 180]
+
+		for i in tqdm(range(200*390)):
+			updates, accs_avg, train_loss = train_random(deep_model,
 														trainloader, 
 														trainset, 
 														n_train, 
@@ -720,30 +724,34 @@ def main(trainloader, trainset, testloader, n_train):
 														n_steps, 
 														updates)
 
-			if i > 0:
-				# evaluate on validation set
-				prec1, test_loss = validate_random(model, testloader, optimizer, updates)
+			# evaluate on validation set
+			prec1, test_loss = validate_random(deep_model, testloader, optimizer, updates)
 
-				row = {'updates': str(updates), 
-						'train_acc': str(accs_avg), 
-						'train_loss': str(train_loss), 
-						'test_acc': str(prec1),
-						'test_loss': str(test_loss),
-						'learning_rate': str(optimizer.param_groups[0]['lr'])}
+			row = {'updates': str(updates), 
+					'train_acc': str(accs_avg), 
+					'train_loss': str(train_loss), 
+					'test_acc': str(prec1),
+					'test_loss': str(test_loss),
+					'learning_rate': str(optimizer.param_groups[0]['lr'])}
 
-				csv_logger.writerow(row)
-				# remember best prec@1 and save checkpoint
-				is_best = prec1 > best_prec1
-				best_prec1 = max(prec1, best_prec1)
+			csv_logger.writerow(row)
+			# remember best prec@1 and save checkpoint
+			is_best = prec1 > best_prec1
+			best_prec1 = max(prec1, best_prec1)
 
-				save_checkpoint({
-					'epoch': updates + 1,
-					'state_dict': model.state_dict(),
-					'best_prec1': best_prec1,
-				}, is_best)
+			save_checkpoint({
+				'epoch': updates + 1,
+				'state_dict': deep_model.state_dict(),
+				'best_prec1': best_prec1,
+			}, is_best)
 
-			if updates > 7500:
-				break
+			if i == epochs[0]*390:
+				optimizer.param_groups[0]['lr'] = 0.01
+			if i == epochs[1]*390:
+				optimizer.param_groups[0]['lr'] = 0.001
+			if i == epochs[2]*390:
+				optimizer.param_groups[0]['lr'] = 0.0001
+			#	break
 
 		print ('Best accuracy: ', best_prec1)
 		csv_logger.close()

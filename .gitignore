@@ -8,3 +8,14 @@ __pycache__
 *.py~
 runs/
 results/
+magnet_results_old/
+random_results/
+results_old/
+results_old2/
+run_iclr_jobs.sh
+run_small_iclr_jobs.sh
+run_weekend_jobs.sh
+spl_results/
+spld_dml_results/
+sunday.sh
+

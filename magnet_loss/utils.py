@@ -39,6 +39,7 @@ def show_images(H):
 
 
 def plot_embedding(X, y, imgs=None, title=None, name=None):
+    #pdb.set_trace()
     # Adapted from http://scikit-learn.org/stable/auto_examples/manifold/plot_lle_digits.html
     x_min, x_max = np.min(X, 0), np.max(X, 0)
     X = (X - x_min) / (x_max - x_min)

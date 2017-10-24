@@ -30,3 +30,28 @@ Traceback (most recent call last):
   File "spl_dml.py", line 25, in <module>
     from tqdm import tqdm
 ImportError: No module named tqdm
+THCudaCheck FAIL file=/opt/conda/conda-bld/pytorch_1502006348621/work/torch/lib/THC/generic/THCStorage.cu line=66 error=46 : all CUDA-capable devices are busy or unavailable
+==> Preparing data..
+Files already downloaded and verified
+Files already downloaded and verified
+==>>> Total Training Batch Number: 50000
+==>>> Total Number of Train Batches: 390
+==>>> Total Number of Test Batches: 78
+Starting Training...
+| Wide-Resnet 28x10
+Traceback (most recent call last):
+  File "spl_dml.py", line 1399, in <module>
+    
+  File "spl_dml.py", line 576, in main
+    
+  File "/export/mlrg/vthangar/anaconda2/envs/pytorch-py2-env/lib/python2.7/site-packages/torch/nn/modules/module.py", line 147, in cuda
+    return self._apply(lambda t: t.cuda(device_id))
+  File "/export/mlrg/vthangar/anaconda2/envs/pytorch-py2-env/lib/python2.7/site-packages/torch/nn/modules/module.py", line 118, in _apply
+    module._apply(fn)
+  File "/export/mlrg/vthangar/anaconda2/envs/pytorch-py2-env/lib/python2.7/site-packages/torch/nn/modules/module.py", line 124, in _apply
+    param.data = fn(param.data)
+  File "/export/mlrg/vthangar/anaconda2/envs/pytorch-py2-env/lib/python2.7/site-packages/torch/nn/modules/module.py", line 147, in <lambda>
+    return self._apply(lambda t: t.cuda(device_id))
+  File "/export/mlrg/vthangar/anaconda2/envs/pytorch-py2-env/lib/python2.7/site-packages/torch/_utils.py", line 66, in _cuda
+    return new_type(self.size()).copy_(self, async)
+KeyboardInterrupt

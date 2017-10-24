@@ -12,7 +12,7 @@ from torchvision import transforms
 from datasets.fashion import FASHION
 
 import numpy as np
-from utils.sampler import SubsetSequentialSampler, ClassificationBasedSampler, SubsetSequentialSamplerSPLDML, SubsetSequentialSamplerSPLD
+from utils.sampler import StratifiedSampler, SubsetSequentialSampler, ClassificationBasedSampler, SubsetSequentialSamplerSPLDML, SubsetSequentialSamplerSPLD
 
 def load_dataset(args):
 	'''
@@ -157,6 +157,24 @@ def load_dataset(args):
 								batch_size=args.batch_size,
 								shuffle=True,
 								num_workers=1)
+	elif args.stratified:
+		n_train = len(trainset)
+		labels = getattr(trainset, 'train_labels')
+
+		if isinstance(labels, list):
+			labels = torch.FloatTensor(np.array(labels))
+
+		train_sampler = StratifiedSampler(labels, args.batch_size)
+		trainloader = DataLoader(trainset,
+								 batch_size=args.batch_size,
+								 shuffle=False,
+								 num_workers=4,
+								 sampler=train_sampler)
+
+		testloader = DataLoader(testset,
+								batch_size=args.batch_size,
+								shuffle=False,
+								num_workers=4)
 	# Random sampling
 	else:
 		n_train = len(trainset)

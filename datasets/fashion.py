@@ -1,3 +1,4 @@
+
 from __future__ import print_function
 import torch.utils.data as data
 from PIL import Image
@@ -8,8 +9,8 @@ import torch
 import codecs
 
 
-class FASHION(data.Dataset):
-    """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
+class FashionMNIST(data.Dataset):
+    """Fashion MNIST Zalando Dataset.
     Args:
         root (string): Root directory of dataset where ``processed/training.pt``
             and  ``processed/test.pt`` exist.
@@ -49,9 +50,10 @@ class FASHION(data.Dataset):
 
         if self.train:
             self.train_data, self.train_labels = torch.load(
-                os.path.join(root, self.processed_folder, self.training_file))
+                os.path.join(self.root, self.processed_folder, self.training_file))
         else:
-            self.test_data, self.test_labels = torch.load(os.path.join(root, self.processed_folder, self.test_file))
+            self.test_data, self.test_labels = torch.load(
+                os.path.join(self.root, self.processed_folder, self.test_file))
 
     def __getitem__(self, index):
         """
