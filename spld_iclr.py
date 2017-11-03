@@ -1,5 +1,7 @@
 #sqsub -q gpu -f mpi -n 1 --mpp=4G -r 240m --gpp 1 -o /dev/null --nompirun screen -D -m
 
+import matplotlib
+matplotlib.use('Agg')
 import os
 import os.path
 import argparse
@@ -118,7 +120,7 @@ class CSVLogger():
     def close(self):
         self.csv_file.close()
 
-CUDA_VISIBLE_DEVICES = 0
+#CUDA_VISIBLE_DEVICES = 0
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 cudnn.benchmark = True  # Should make training should go faster for large models
@@ -386,7 +388,7 @@ elif args.model == 'magnetlenet':
 elif args.model == 'magnetfashion':
     cnn = FashionSimpleNet(num_classes)
 
-if args.spldml:
+if args.spldml or args.magnet:
     if args.shallow_model == 'resnet18':
         num_classes = 2
         shallow_net = PreActResNet18(channels=num_channels, num_classes=num_classes)
@@ -432,7 +434,7 @@ cnn_optimizer = torch.optim.SGD(cnn.parameters(), lr=args.learning_rate1,
 if args.dataset == 'svhn':
     scheduler = MultiStepLR(cnn_optimizer, milestones=[80, 120], gamma=0.1)
 else:
-    scheduler = MultiStepLR(cnn_optimizer, milestones=[60, 120, 160], gamma=0.2)
+    scheduler = MultiStepLR(cnn_optimizer, milestones=[23400, 46800, 62400], gamma=0.1)
 
 if args.spl:
     train_sampler = SubsetSequentialSampler(range(len(train_dataset)), range(len(train_dataset)))
@@ -465,14 +467,21 @@ if args.spl:
     if args.dataset in ['cifar10', 'cifar100', 'svhn']:
         spld_params = [500, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['mnist', 'fashionmnist']:
-        spld_params = [500, 1e-3, 5e-2, 1e-1]
+        #spld_params = [500, 1e-3, 5e-2, 1e-1]
+        spld_params = [500, 5e-1, 1e-1, 1e-1]
 
     if args.dataset == 'svhn':
         labels = train_dataset.labels
+        labels = np.hstack(labels)
+        #pdb.set_trace()
     else:
         labels = getattr(train_dataset, 'train_labels')
+        #pdb.set_trace()
+    if args.dataset == 'svhn':
+        initial_reps = compute_reps(cnn, train_dataset, 4680)
+    else:
+        initial_reps = compute_reps(cnn, train_dataset, 400)
 
-    initial_reps = compute_reps(cnn, train_dataset, 400)
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
 
@@ -543,7 +552,7 @@ if args.spl:
         spl_logger.writerow(row)
 
         if args.en_scheduler:
-            scheduler.step(i)
+            scheduler.step(updates)
 
         batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.batch_size)
         train_loader.sampler.batch_indices = batch_train_inds
@@ -553,8 +562,13 @@ if args.spl:
         spld_params[0] = int(round(spld_params[0]))
         spld_params[1] *= (1+spld_params[3])
 
-        if updates >= 23000:
-            break
+        if args.dataset == 'cifar10':
+            if updates >= 200*390:
+                break
+        elif args.dataset in ['mnist','fashionmnist']:
+            if updates >= 60*390:
+                break
+
         # if i > 0 and i % 10 == 0:
         #   print("Refreshing clusters")
         #   reps = compute_reps(cnn, train_dataset, 400)
@@ -626,17 +640,25 @@ if args.random:
         random_logger.writerow(row)
 
         if args.en_scheduler:
-            scheduler.step(epoch)
+            scheduler.step(updates)
 
         # row = {'epoch': str(updates), 'train_acc': str(accuracy), 'train_loss': str(xentropy_loss_avg), 'test_acc': str(test_acc), 'test_loss': str(test_loss)}
         # random_logger.writerow(row)
 
-        if updates >= 23000:
-            break
+        if args.dataset == 'cifar10':
+            if updates >= 200*390:
+                break
+        elif args.dataset in ['mnist','fashionmnist']:
+            if updates >= 60*390:
+                break
+
+        #print(str(cnn_optimizer.param_groups[0]['lr']))
     #torch.save(cnn.state_dict(), 'checkpoints/baseline_' + test_id + '.pt')
     random_logger.close()
 
 if args.magnet:
+    shallow_net = torch.nn.DataParallel(shallow_net).cuda()
+    args.batch_size = 64
     n_train = len(train_dataset)
     train_sampler = SubsetSequentialSampler(range(len(train_dataset)), range(args.batch_size))
     train_loader = DataLoader(train_dataset,
@@ -655,7 +677,7 @@ if args.magnet:
     d = 8
     alpha = 1.0
 
-    cnn_optimizer = torch.optim.Adam(cnn.parameters(), lr=args.learning_rate2)
+    cnn_optimizer = torch.optim.Adam(shallow_net.parameters(), lr=args.learning_rate2)
     minibatch_magnet_loss = MagnetLoss()
 
     if args.dataset == 'svhn':
@@ -663,7 +685,11 @@ if args.magnet:
     else:
         labels = getattr(train_dataset, 'train_labels')
 
-    initial_reps = compute_reps(cnn, train_dataset, 400)
+    if args.dataset == 'svhn':
+        initial_reps = compute_reps(shallow_net, train_dataset, 4680)
+    else:
+        initial_reps = compute_reps(shallow_net, train_dataset, 400)
+
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
 
@@ -696,8 +722,8 @@ if args.magnet:
             images = Variable(images).cuda()
             targets = Variable(targets).cuda()
 
-            cnn.zero_grad()
-            pred, _ = cnn(images)
+            shallow_net.zero_grad()
+            pred, _ = shallow_net(images)
 
             batch_loss, batch_example_losses = minibatch_magnet_loss(pred,
                                                                     batch_class_inds, 
@@ -722,16 +748,24 @@ if args.magnet:
 
         if not i % cluster_refresh_interval:
             print("Refreshing clusters")
-            reps = compute_reps(cnn, train_dataset, 400)
+            if args.dataset == 'svhn':
+                reps = compute_reps(shallow_net, train_dataset, 4680)
+            else:
+                reps = compute_reps(shallow_net, train_dataset, 400)
             batch_builder.update_clusters(reps)
 
         if args.plot:
             if not i % 2000:
                 n_plot = 8000
                 #pdb.set_trace()
-                plot_embedding(compute_reps(cnn, train_dataset, 400)[:n_plot], 
-                                            labels[:n_plot], 
-                                            name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))
+                if args.dataset == 'svhn':
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot], 
+                                                labels[:n_plot], 
+                                                name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))
+                else:
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], 
+                                                labels[:n_plot], 
+                                                name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))  
                 #plot_embedding(compute_reps(cnn, train_dataset, 400)[:n_plot], labels[:n_plot], name=args.dataset + '_' + test_id + '_' + str(i))
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
@@ -775,7 +809,11 @@ if args.spldml:
     else:
         labels = getattr(train_dataset, 'train_labels')
 
-    initial_reps = compute_reps(shallow_net, train_dataset, 400)
+    if args.dataset == 'svhn':
+        initial_reps = compute_reps(shallow_net, train_dataset, 4680)
+    else:
+        initial_reps = compute_reps(shallow_net, train_dataset, 400)
+
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
 
@@ -835,13 +873,19 @@ if args.spldml:
 
         if not i % cluster_refresh_interval:
             print("Refreshing clusters")
-            reps = compute_reps(shallow_net, train_dataset, 400)
+            if args.dataset == 'svhn':
+                reps = compute_reps(shallow_net, train_dataset, 4680)
+            else:
+                reps = compute_reps(shallow_net, train_dataset, 400)
             batch_builder.update_clusters(reps)
 
         if args.plot:
             if not i % 1000:
                 n_plot = 8000
-                plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))
+                if args.dataset == 'svhn':
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))
+                else:
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))   
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         train_loader.sampler.batch_indices = batch_example_inds
@@ -888,7 +932,8 @@ if args.spldml:
     if args.dataset in ['cifar10', 'cifar100', 'svhn']:
         spld_params = [500, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['mnist', 'fashionmnist']:
-        spld_params = [500, 1e-3, 5e-2, 1e-1]
+        spld_params = [500, 5e-1, 1e-1, 1e-1]
+        #spld_params = [500, 1e-3, 5e-2, 1e-1]
         #spld_params = [100, 1e-3, 5e-2, 1e-1]
 
     if args.dataset == 'svhn':
@@ -932,6 +977,7 @@ if args.spldml:
             xentropy_loss_vector_mean = xentropy_loss_vector.mean()
             xentropy_loss_avg += xentropy_loss_vector_mean.data[0]
             #pdb.set_trace()
+            
             # Backward
             xentropy_loss_vector_mean.backward()
             cnn_optimizer.step()
@@ -963,7 +1009,7 @@ if args.spldml:
         spldml_logger.writerow(row)
 
         if args.en_scheduler:
-            scheduler.step(i)
+            scheduler.step(updates)
 
         # row = {'epoch': str(updates), 'train_acc': str(accuracy), 'train_loss': str(xentropy_loss_avg), 'test_acc': str(test_acc), 'test_loss': str(test_loss)}
         # spldml_logger.writerow(row)
@@ -976,7 +1022,10 @@ if args.spldml:
         spld_params[0] = int(round(spld_params[0]))
         spld_params[1] *= (1+spld_params[3])
 
-        if updates >= 23000:
-            break
-
+        if args.dataset == 'cifar10':
+            if updates >= 200*390:
+                break
+        elif args.dataset in ['mnist','fashionmnist']:
+            if updates >= 60*390:
+                break
     spldml_logger.close()

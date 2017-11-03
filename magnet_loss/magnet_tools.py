@@ -25,7 +25,7 @@ def compute_reps(model, X, chunk_size):
         output, train_features = model(img)
         #train_features = model(img)
         embeddings = output.data
-        #pdb.set_trace()
+
         reps.append(embeddings.cpu().numpy())
         #labels.append(target.cpu().numpy())
     return np.vstack(reps)
@@ -56,7 +56,7 @@ def compute_reps(model, X, chunk_size):
 class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
     def __init__(self, labels, k, m, d):
-
+        #pdb.set_trace()
         if isinstance(labels, np.ndarray):
             self.num_classes = np.unique(labels).shape[0]
             self.labels = labels
@@ -107,7 +107,7 @@ class ClusterBatchBuilder(object):
         for class_idx in range(self.num_classes):
 
             class_mask = self.labels == class_idx # Boolean mask for selecting examples
-
+            #pdb.set_trace()
             class_examples = rep_data[class_mask] # Mask features based on the class mask
  
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)

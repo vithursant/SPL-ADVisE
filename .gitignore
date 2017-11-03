@@ -18,4 +18,6 @@ run_weekend_jobs.sh
 spl_results/
 spld_dml_results/
 sunday.sh
-
+*.pdf
+magnet_results
+*.txt
