@@ -21,3 +21,5 @@ sunday.sh
 *.pdf
 magnet_results
 *.txt
+spld_results/
+leap_results/
