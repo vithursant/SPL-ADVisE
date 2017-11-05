@@ -56,7 +56,6 @@ def compute_reps(model, X, chunk_size):
 class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
     def __init__(self, labels, k, m, d):
-        pdb.set_trace()
         if isinstance(labels, np.ndarray):
             self.num_classes = np.unique(labels).shape[0]
             self.labels = labels
@@ -90,7 +89,7 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
 
 
-    def update_clusters(self, rep_data, max_iter=20):
+    def update_clusters(self, dataset, rep_data, max_iter=20):
         """
         Given an array of representations for the entire training set,
         recompute clusters and store example cluster assignments in a
@@ -106,10 +105,14 @@ class ClusterBatchBuilder(object):
 
         # TODO: for SVHN fix class labels to start from 1 to 11
         for class_idx in range(self.num_classes):
-            pdb.set_trace()
-            class_mask = self.labels == class_idx # Boolean mask for selecting examples
-            #pdb.set_trace()
-            class_examples = rep_data[class_mask] # Mask features based on the class mask
+            if dataset == 'svhn':
+                class_mask = self.labels == class_idx+1 # Boolean mask for selecting examples
+                #pdb.set_trace()
+                class_examples = rep_data[class_mask] # Mask features based on the class mask
+            else:
+                class_mask = self.labels == class_idx # Boolean mask for selecting examples
+                #pdb.set_trace()
+                class_examples = rep_data[class_mask] # Mask features based on the class mask
 
             kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
             kmeans.fit(class_examples)

@@ -136,6 +136,8 @@ else:
     scheduler = MultiStepLR(cnn_optimizer, milestones=[23400, 46800, 62400], gamma=0.1)
 
 def main():
+    # TODO: Test on SVHN, Skin Lesion Classification, Tiny Imagenet
+    # TODO: Try LEAP for CapsNet
     if args.spld:
         self_paced_learning_with_diversity(args, train_dataset, test_dataset, cnn_optimizer, cnn, scheduler)
     elif args.random:

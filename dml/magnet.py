@@ -52,7 +52,7 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
 
     optimizer = torch.optim.Adam(embedding_cnn.parameters(), lr=args.learning_rate2)
     minibatch_magnet_loss = MagnetLoss()
-    pdb.set_trace()
+
     if args.dataset == 'svhn':
 #         (Pdb) train_dataset.labels
 # array([[1],
@@ -73,7 +73,7 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
         initial_reps = compute_reps(embedding_cnn, train_dataset, 400)
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
-    batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
+    batch_builder.update_clusters(args.dataset, initial_reps, max_iter=args.max_iter)
 
     batch_losses = []
 
@@ -92,6 +92,9 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
     n_steps = epoch_steps * n_epochs
     cluster_refresh_interval = epoch_steps
 
+    if args.dataset in ['svhn']:
+        n_steps = 8000
+        
     _ = embedding_cnn.train()
     updates = 0
 
@@ -134,7 +137,7 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
                 reps = compute_reps(embedding_cnn, train_dataset, 4680)
             else:
                 reps = compute_reps(embedding_cnn, train_dataset, 400)
-            batch_builder.update_clusters(reps)
+            batch_builder.update_clusters(args.dataset, reps)
 
         if args.plot:
             if not i % 2000:
