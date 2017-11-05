@@ -54,15 +54,6 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
     minibatch_magnet_loss = MagnetLoss()
 
     if args.dataset == 'svhn':
-#         (Pdb) train_dataset.labels
-# array([[1],
-#        [9],
-#        [2],
-#        ...,
-#        [2],
-#        [1],
-#        [4]], dtype=uint8)
-
         labels = train_dataset.labels.flatten()
     else:
         labels = getattr(train_dataset, 'train_labels')
@@ -94,7 +85,7 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
 
     if args.dataset in ['svhn']:
         n_steps = 8000
-        
+
     _ = embedding_cnn.train()
     updates = 0
 

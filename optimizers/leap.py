@@ -104,7 +104,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
     minibatch_magnet_loss = MagnetLoss()
 
     if args.dataset == 'svhn':
-        labels = train_dataset.labels
+        labels = train_dataset.labels.flatten()
     else:
         labels = getattr(train_dataset, 'train_labels')
 
@@ -114,7 +114,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
         initial_reps = compute_reps(embedding_model, train_dataset, 400)
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
-    batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
+    batch_builder.update_clusters(args.dataset, initial_reps, max_iter=args.max_iter)
 
     batch_losses = []
 
@@ -132,6 +132,9 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
     #epoch_steps = len(train_loader)
     n_steps = epoch_steps * n_epochs
     cluster_refresh_interval = epoch_steps
+
+    if args.dataset in ['svhn']:
+        n_steps = 8000
 
     _ = embedding_model.train()
     updates = 0
@@ -176,7 +179,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
                 reps = compute_reps(embedding_model, train_dataset, 4680)
             else:
                 reps = compute_reps(embedding_model, train_dataset, 400)
-            batch_builder.update_clusters(reps)
+            batch_builder.update_clusters(args.dataset, reps)
 
         if args.plot:
             if not i % 1000:
