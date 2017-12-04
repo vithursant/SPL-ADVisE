@@ -55,9 +55,68 @@ def magnet(args, train_dataset, test_dataset, embedding_cnn, scheduler):
 
     if args.dataset == 'svhn':
         labels = train_dataset.labels.flatten()
+    elif args.dataset == 'tinyimagenet':
+        # class_map_file = "/scratch/vthangar/tiny-imagenet-200/words.txt"
+        # with open(class_map_file) as f:
+        #     class_map = f.readlines()
+        # class_map = [x.strip().split('\t') for x in class_map]
+        #
+        # wnids_file = "/scratch/vthangar/tiny-imagenet-200/wnids.txt"
+        #
+        # with open(wnids_file, 'r') as f:
+        #     wnids = f.readlines()
+        # wnids = [x.strip() for x in wnids]
+        # wnids.sort()
+        # ID_to_label = {}
+        # for label, ID in enumerate(wnids):
+        #     ID_to_label[ID] = label
+        # pdb.set_trace()
+        #from os import listdir
+        #from os.path import isfile, join
+
+        labels = "/scratch/vthangar/tiny-imagenet-200/wnids.txt"
+        # First load wnids
+        with open(labels, 'r') as f:
+            wnids = [x.strip() for x in f]
+
+        # Map wnids to integer labels
+        wnid_to_label = {wnid: i for i, wnid in enumerate(wnids)}
+        pdb.set_trace()
+        # #nsamples = int(round(sample*500))
+        # label_dict=dict()
+        # labels=open(labels,'r').read().split('\n')
+        #
+        # while '' in labels:
+        #     labels.remove('')
+        #
+        # for i in range(len(labels)):
+        #     label_dict[labels[i]] = i
+        #
+        # print "built dictionary of labels (id --> number) "
+        #
+        # file_names=[]
+        # labels=[]
+        #
+        # for label in label_dict:
+        #     #print str(label)
+        #     cur_dir = "/scratch/vthangar/tiny-imagenet-200/train/" + label + "/images"
+        #     onlyfiles = [f for f in listdir(cur_dir) if isfile(join(cur_dir, f))]
+        #     onlyfiles = [cur_dir + '/' + f for f in onlyfiles]
+        #     file_names = file_names+onlyfiles
+        #     print str(len(file_names))
+        #     pdb.set_trace()
+        #     #cur_labels=nsamples*[label_dict[label]]
+        #     #labels = labels + cur_labels
+        #     print str(len(labels))
+        # print str(file_names)
+        # pdb.set_trace()
+        # our_index = file_names.index(cur_dir + '/' + sys.argv[1])
+        # #print str(our_index)
+        # outf=open('train_data_names.txt','w')
+        # outf.write('\n'.join(file_names))
     else:
         labels = getattr(train_dataset, 'train_labels')
-
+    pdb.set_trace()
     if args.dataset == 'svhn':
         initial_reps = compute_reps(embedding_cnn, train_dataset, 4680)
     else:

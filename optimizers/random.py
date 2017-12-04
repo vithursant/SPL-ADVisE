@@ -139,6 +139,9 @@ def random_sampling(args, train_dataset, test_dataset, optimizer, model, schedul
             if updates >= 60*390:
                 break
 
+        elif args.dataset in ['svhn']:
+            if updates >= 15000:
+                break
         #print(str(cnn_optimizer.param_groups[0]['lr']))
     #torch.save(cnn.state_dict(), 'checkpoints/baseline_' + test_id + '.pt')
     random_logger.close()

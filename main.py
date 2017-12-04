@@ -30,6 +30,7 @@ from models.lenet import LeNet
 from models.magnet_lenet import MagnetLeNet
 from models.fashion_model import FashionSimpleNet
 from models.vgg_cifar import VGG
+#from models.vgg import *
 
 from datasets.transform import *
 from datasets.prepare_dataset import *
@@ -109,6 +110,9 @@ if args.leap or args.magnet:
     elif args.embedding_model == 'vgg16':
         num_classes = 2
         embedding_cnn = VGG(depth=16, num_classes=num_classes, channels=num_channels)
+    elif args.embedding_model == 'vgg11':
+        num_classes = 2
+        embedding_cnn = vgg11(num_classes)
     elif args.embedding_model == 'wideresnet':
         if args.dataset == 'svhn':
             num_classes = 2

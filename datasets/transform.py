@@ -11,6 +11,8 @@ def preform_transform(args):
                                          std=[x / 255.0 for x in [63.0, 62.1, 66.7]])
     elif args.dataset in ['mnist', 'fashionmnist']:
         normalize = transforms.Normalize((0.1307,), (0.3081,))
+    elif args.dataset in ['tinyimagenet']:
+        normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
 
     train_transform = transforms.Compose([])
 
@@ -18,7 +20,7 @@ def preform_transform(args):
         if args.dataset in ['mnist', 'fashionmnist']:
             train_transform.transforms.append(transforms.RandomCrop(28, padding=4))
         elif args.dataset == 'tinyimagenet':
-            train_transform.transforms.append(transforms.RandomCrop(32, padding=8))
+            train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
         else:
             train_transform.transforms.append(transforms.RandomCrop(32, padding=4))
 

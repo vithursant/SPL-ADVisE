@@ -327,7 +327,13 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
         if args.dataset == 'cifar10':
             if updates >= 200*390:
                 break
+            
         elif args.dataset in ['mnist','fashionmnist']:
             if updates >= 60*390:
                 break
+
+        elif args.dataset in ['svhn']:
+            if updates >= 15000:
+                break
+
     leap_logger.close()

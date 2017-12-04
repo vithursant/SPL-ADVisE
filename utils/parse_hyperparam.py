@@ -1,7 +1,7 @@
 import argparse
 
-model_names = ['vgg16','resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'wideresnet', 'lenet', 'magnetlenet', 'magnetfashion']
-magnet_names = ['vgg16', 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'wideresnet', 'lenet', 'magnetlenet', 'magnetfashion']
+model_names = ['vgg11', 'vgg16','resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'wideresnet', 'lenet', 'magnetlenet', 'magnetfashion']
+magnet_names = ['vgg11', 'vgg16', 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'wideresnet', 'lenet', 'magnetlenet', 'magnetfashion']
 dataset_names = ['cifar10', 'cifar100', 'svhn', 'mnist', 'fashionmnist', 'tinyimagenet']
 
 def parse_settings():

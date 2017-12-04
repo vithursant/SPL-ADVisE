@@ -87,7 +87,7 @@ def self_paced_learning_with_diversity(args, train_dataset, test_dataset, optimi
     k = 8
     m = 8
     d = 8
-    
+
     updates = 0
     num_samples = 0
 
@@ -112,7 +112,7 @@ def self_paced_learning_with_diversity(args, train_dataset, test_dataset, optimi
         initial_reps = compute_reps(model, train_dataset, 400)
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
-    batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
+    batch_builder.update_clusters(args.dataset, initial_reps, max_iter=args.max_iter)
 
     for i in range(n_steps):
         loss_vec = np.array([])
@@ -196,6 +196,9 @@ def self_paced_learning_with_diversity(args, train_dataset, test_dataset, optimi
                 break
         elif args.dataset in ['mnist','fashionmnist']:
             if updates >= 60*390:
+                break
+        elif args.dataset in ['svhn']:
+            if updates >= 15000:
                 break
 
     spld_logger.close()

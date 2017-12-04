@@ -85,9 +85,9 @@ def prepare_dataset(args, train_transform, test_transform):
         num_classes = 200
         num_channels = 3
 
-        train_dataset = datasets.ImageFolder(root='./data/tiny-imagenet-200/train',
-                                            transform=train_trainsform)
-        test_dataset = datasets.ImageFolder(root='./data/tiny-imagenet-200/test',
+        train_dataset = datasets.ImageFolder(root='/scratch/vthangar/tiny-imagenet-200/train',
+                                            transform=train_transform)
+        test_dataset = datasets.ImageFolder(root='/scratch/vthangar/tiny-imagenet-200/val',
                                                         transform=test_transform)
 
     return num_classes, num_channels, train_dataset, test_dataset
