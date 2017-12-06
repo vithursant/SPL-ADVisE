@@ -95,10 +95,16 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
                             shuffle=True,
                             num_workers=1)
 
-    k = 8
-    m = 8
-    d = 8
-    alpha = 1.0
+    if args.dataset in ['cifar100']:
+        k = 8
+        m = 8
+        d = 8
+        alpha = 1.0
+    else:
+        k = 8
+        m = 8
+        d = 8
+        alpha = 1.0
 
     embedding_optimizer = torch.optim.Adam(embedding_model.parameters(), lr=args.learning_rate2)
     minibatch_magnet_loss = MagnetLoss()
@@ -119,7 +125,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
     batch_losses = []
 
     batch_example_inds, batch_class_inds = batch_builder.gen_batch()
-    train_loader.sampler.batch_indices = batch_example_inds
+    train_loader.sampler.batch_indices = batch_example_inds.astype(np.int32)
 
     if args.dataset in ['mnist', 'fashionmnist']:
         n_epochs = 15
@@ -222,7 +228,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
                             num_workers=4)
 
     batch_train_inds = np.random.choice(range(len(train_dataset)), len(train_dataset), replace=False)
-    train_loader.sampler.batch_indices = batch_train_inds
+    train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
     #pdb.set_trace()
 
     updates = 0
@@ -317,7 +323,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
         # spldml_logger.writerow(row)
 
         batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.batch_size)
-        train_loader.sampler.batch_indices = batch_train_inds
+        train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
 
         # Increase the learning pace
         spld_params[0] *= (1+spld_params[2])
@@ -327,7 +333,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
         if args.dataset == 'cifar10':
             if updates >= 200*390:
                 break
-            
+
         elif args.dataset in ['mnist','fashionmnist']:
             if updates >= 60*390:
                 break

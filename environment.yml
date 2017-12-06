@@ -1,0 +1,24 @@
+name: leap-cuda8.0
+channels:
+  - conda-forge
+  - ioam
+  - pytorch
+dependencies:
+  - python=2.7
+  - numpy
+  - mkl
+  - holoviews
+  - jupyter
+  - pandas
+  - matplotlib
+  - seaborn
+  - pip:
+    - tqdm
+    - pillow
+    - packaging
+    - appdirs
+    - holoviews
+    - gpustat
+    - sklearn
+    - http://download.pytorch.org/whl/cu80/torch-0.3.0.post4-cp27-cp27mu-linux_x86_64.whl
+    - torchvision

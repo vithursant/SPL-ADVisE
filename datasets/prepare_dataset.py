@@ -1,6 +1,10 @@
 import torchvision
 from torchvision import datasets
 from datasets.fashion import FashionMNIST
+# from datasets.cub2002010 import CUB2002010
+# from datasets.cub2002011 import CUB2002011
+from datasets.cub2002010 import CUB200
+from datasets.tinyimagenet200 import TINY200
 import pdb
 import numpy as np
 
@@ -87,7 +91,47 @@ def prepare_dataset(args, train_transform, test_transform):
 
         train_dataset = datasets.ImageFolder(root='/scratch/vthangar/tiny-imagenet-200/train',
                                             transform=train_transform)
-        test_dataset = datasets.ImageFolder(root='/scratch/vthangar/tiny-imagenet-200/val',
+        test_dataset = datasets.ImageFolder(root='/scratch/vthangar/tiny-imagenet-200/test',
                                                         transform=test_transform)
+        # train_dataset = TINY200(root='/scratch/vthangar/tiny-imagenet-200/train',
+        #                         transform=train_transform)
+        # test_dataset = TINY200(root='/scratch/vthangar/tiny-imagenet-200/test',
+        #                        transform=test_transform)
+
+    elif args.dataset == 'cub2002010':
+        num_classes = 100
+        num_channels = 3
+        train_dataset = CUB200(root='/scratch/vthangar/',
+                                            year=2010,
+                                            train=True,
+                                            transform=train_transform,
+                                            download=True)
+
+        test_dataset = CUB200(root='/scratch/vthangar/',
+                                            year=2010,
+                                           train=False,
+                                           transform=test_transform,
+                                           download=True)
+        # train_dataset = CUB2002010(root='/scratch/vthangar/',
+        #                                     train=True,
+        #                                     transform=train_transform,
+        #                                     download=True)
+        # test_dataset = CUB2002010(root='/scratch/vthangar/',
+        #                                    train=False,
+        #                                    transform=test_transform,
+        #                                    download=True)
+    elif args.dataset == 'cub2002011':
+        num_classes = 100
+        num_channels = 3
+        train_dataset = CUB200(root='/scratch/vthangar/',
+                                            year=2011,
+                                            train=True,
+                                            transform=train_transform,
+                                            download=True)
+        test_dataset = CUB200(root='/scratch/vthangar/',
+                                            year=2011,
+                                            train=True,
+                                           transform=test_transform,
+                                           download=True)
 
     return num_classes, num_channels, train_dataset, test_dataset

@@ -1,5 +1,6 @@
 import torchvision
 from torchvision import transforms
+import pdb
 
 def preform_transform(args):
     # Image Preprocessing
@@ -13,6 +14,8 @@ def preform_transform(args):
         normalize = transforms.Normalize((0.1307,), (0.3081,))
     elif args.dataset in ['tinyimagenet']:
         normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+    elif args.dataset in ['cub2002010', 'cub2002011']:
+        normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
     train_transform = transforms.Compose([])
 
@@ -21,6 +24,9 @@ def preform_transform(args):
             train_transform.transforms.append(transforms.RandomCrop(28, padding=4))
         elif args.dataset == 'tinyimagenet':
             train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
+        elif args.dataset in ['cub2002010', 'cub2002011']:
+            #train_transform.transforms.append(transforms.Scale(64, padding=4))
+            train_transform.transforms.append(transforms.Resize((64, 64)))
         else:
             train_transform.transforms.append(transforms.RandomCrop(32, padding=4))
 
@@ -32,5 +38,5 @@ def preform_transform(args):
     test_transform = transforms.Compose([
         transforms.ToTensor(),
         normalize])
-
+    #pdb.set_trace()
     return train_transform, test_transform

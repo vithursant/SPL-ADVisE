@@ -56,7 +56,6 @@ def compute_reps(model, X, chunk_size):
 class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
     def __init__(self, labels, k, m, d):
-        pdb.set_trace()
         if isinstance(labels, np.ndarray):
             self.num_classes = np.unique(labels).shape[0]
             self.labels = labels
@@ -223,7 +222,7 @@ class ClusterBatchBuilder(object):
         for i, c in enumerate(clusters):
             #pdb.set_trace()
             # Go through each cluster and select random samples that are size self.d
-            x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
+            x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x
@@ -270,12 +269,14 @@ class ClusterBatchBuilder(object):
             #pdb.set_trace()
         selected_samples_idx = np.where(selected_samples_idx == 1)
 
-        left_over = len(selected_samples_idx[0]) % batch_size
+        # left_over = len(selected_samples_idx[0]) % batch_size
+        #
+        # if left_over > 0:
+        #     selected_samples_idx = np.append(selected_samples_idx[0], np.random.choice(range(len(self.labels)), batch_size - left_over, replace=False))
+        # else:
+        #     selected_samples_idx = selected_samples_idx[0]
 
-        if left_over > 0:
-            selected_samples_idx = np.append(selected_samples_idx[0], np.random.choice(range(len(self.labels)), batch_size - left_over, replace=False))
-        else:
-            selected_samples_idx = selected_samples_idx[0]
+
             #grouploss_threshold = np.vstack((loss_incluster[sort_idx], grouped_threshold))
             #pdb.set_trace()
 
@@ -329,7 +330,7 @@ class ClusterBatchBuilder(object):
         # selected_samples_idx = np.where(selected_samples_idx == 1)
         # sortedselected_idx = np.take(selected_scores, selected_samples_idx)
         # #pdb.set_trace()
-        return selected_samples_idx
+        return selected_samples_idx[0]
 
     def get_cluster_ind(self, c, i):
         """

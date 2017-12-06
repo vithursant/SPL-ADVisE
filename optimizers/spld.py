@@ -82,7 +82,7 @@ def self_paced_learning_with_diversity(args, train_dataset, test_dataset, optimi
                                               num_workers=4)
 
     batch_train_inds = np.random.choice(range(len(train_dataset)), len(train_dataset), replace=False)
-    train_loader.sampler.batch_indices = batch_train_inds
+    train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
 
     k = 8
     m = 8
@@ -94,8 +94,10 @@ def self_paced_learning_with_diversity(args, train_dataset, test_dataset, optimi
     epoch_steps = int(ceil(len(train_dataset)) / args.batch_size)
     n_steps = epoch_steps * 15
 
-    if args.dataset in ['cifar10', 'cifar100', 'svhn']:
+    if args.dataset in ['cifar10', 'svhn']:
         spld_params = [500, 5e-1, 1e-1, 1e-1]
+    elif args.dataset in ['cifar100']:
+        spld_params = [10, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['mnist', 'fashionmnist']:
         #spld_params = [500, 1e-3, 5e-2, 1e-1]
         spld_params = [500, 5e-1, 1e-1, 1e-1]
@@ -184,7 +186,7 @@ def self_paced_learning_with_diversity(args, train_dataset, test_dataset, optimi
             scheduler.step(updates)
 
         batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.batch_size)
-        train_loader.sampler.batch_indices = batch_train_inds
+        train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
 
         # Increase the learning pace
         spld_params[0] *= (1+spld_params[2])

@@ -30,6 +30,9 @@ from models.lenet import LeNet
 from models.magnet_lenet import MagnetLeNet
 from models.fashion_model import FashionSimpleNet
 from models.vgg_cifar import VGG
+from models.inception import Inception3
+from models.resnext import resnext
+from models.densenet import densenet
 #from models.vgg import *
 
 from datasets.transform import *
@@ -77,6 +80,8 @@ elif args.model == 'resnet101':
     cnn = PreActResNet101(channels=num_channels, num_classes=num_classes)
 elif args.model == 'resnet152':
     cnn = PreActResNet152(channels=num_channels, num_classes=num_classes)
+elif args.model == 'inceptionv3':
+    cnn = Inception3(num_classes=num_classes)
 elif args.model == 'vgg16':
     cnn = VGG(depth=16, num_classes=num_classes, channels=num_channels)
 elif args.model == 'wideresnet':
@@ -90,6 +95,10 @@ elif args.model == 'magnetlenet':
     cnn = MagnetLeNet(num_classes)
 elif args.model == 'magnetfashion':
     cnn = FashionSimpleNet(num_classes)
+elif args.model == 'resnext':
+    cnn = resnext(cardinality=args.cardinality, num_classes=num_classes, depth=args.depth, widen_factor=args.widen_factor, dropRate=args.dropout_rate)
+elif args.model == 'densenet':
+    cnn = densenet(num_classes=num_classes, depth=args.depth, growthRate=args.growthRate, compressionRate=args.compressionRate, dropRate=args.dropout_rate)
 
 if args.leap or args.magnet:
     if args.embedding_model == 'resnet18':
@@ -129,7 +138,7 @@ if args.leap or args.magnet:
 
 if not args.leap:
     cnn = torch.nn.DataParallel(cnn).cuda()
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss()
 
 cnn_optimizer = torch.optim.SGD(cnn.parameters(), lr=args.learning_rate1,
                                 momentum=0.9, nesterov=True, weight_decay=5e-4)
