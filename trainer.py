@@ -25,6 +25,7 @@ from optimizers.spld import *
 from optimizers.leap import *
 from optimizers.random_selector import random_selector
 from optimizers.spld_selector import spld_selector
+from optimizers.leap_selector import leap_selector
 
 from dml.magnet import *
 
@@ -34,7 +35,7 @@ from models.lenet import LeNet
 from models.magnet_lenet import MagnetLeNet
 from models.fashion_model import FashionSimpleNet
 from models.vgg_cifar import VGG
-from models.inception import Inception3
+from models.inception import inception_v3
 from models.resnext import resnext
 from models.densenet import densenet
 from models.preresnet import preresnet
@@ -115,7 +116,8 @@ def main():
     elif args.model == 'preresnet':
         cnn = preresnet(depth=args.depth, num_classes=num_classes)
     elif args.model == 'inceptionv3':
-        cnn = Inception3(num_classes=num_classes)
+        #cnn = Inception3(num_classes=num_classes)
+        cnn = inception_v3(pretrained=True, num_classes=num_classes)
     elif args.model == 'vgg16':
         cnn = VGG(depth=16, num_classes=num_classes, channels=num_channels)
     elif args.model == 'wideresnet':
@@ -175,7 +177,7 @@ def main():
 
     print('    Total params: %.2fM' % (sum(p.numel() for p in cnn.parameters())/1000000.0))
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(cnn.parameters(),
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, cnn.parameters()),
                           lr=args.learning_rate1,
                           momentum=args.momentum,
                           weight_decay=args.weight_decay)
@@ -207,6 +209,17 @@ def main():
         random_selector(args, state, start_epoch, train_dataset, test_dataset, cnn, criterion, optimizer, use_cuda, logger)
     elif args.spld:
         spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, optimizer, use_cuda, logger)
+    elif args.leap:
+        leap_selector(  args,
+                        state,
+                        train_dataset,
+                        test_dataset,
+                        cnn,
+                        embedding_cnn,
+                        criterion,
+                        optimizer,
+                        use_cuda,
+                        logger)
 
     # for epoch in range(start_epoch, args.epochs):
     #     adjust_learning_rate(optimizer, epoch)

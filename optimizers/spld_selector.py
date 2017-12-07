@@ -62,7 +62,7 @@ def train(args, trainloader, model, criterion, optimizer, use_cuda, updates, bat
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
         # compute output
-        outputs, features = model(inputs)
+        outputs, _ = model(inputs)
         #loss = criterion(outputs, targets)
 
         # Compute the loss for each sample in the minibatch
@@ -113,6 +113,7 @@ def train(args, trainloader, model, criterion, optimizer, use_cuda, updates, bat
     bar.finish()
 
     batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.train_batch)
+    #pdb.set_trace()
     trainloader.sampler.batch_indices = batch_train_inds.astype(np.int32)
 
     # Increase the learning pace
@@ -206,7 +207,9 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
     if args.dataset in ['cifar10', 'svhn']:
         spld_params = [50, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['cifar100']:
-        spld_params = [10, 5e-1, 1e-1, 1e-1]
+        spld_params = [50, 5e-1, 1e-1, 1e-1]
+    elif args.dataset in ['cub2002010']:
+        spld_params = [5, 5e-1, 1e-1, 1]
     elif args.dataset in ['mnist', 'fashionmnist']:
         #spld_params = [500, 1e-3, 5e-2, 1e-1]
         spld_params = [500, 5e-1, 1e-1, 1e-1]
@@ -214,6 +217,8 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
     if args.dataset == 'svhn':
         labels = train_dataset.labels
         labels = np.hstack(labels)
+    elif args.dataset == 'cub2002010':
+        labels = [int(i[1]) for i in train_dataset.imgs]
     else:
         labels = getattr(train_dataset, 'train_labels')
     #pdb.set_trace()
@@ -227,7 +232,8 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
 
     epoch_steps = int(ceil(len(train_dataset)) / args.train_batch)
     n_steps = epoch_steps * args.epochs
-
+    if args.dataset in ['cifar100']:
+        n_steps = 250
     args.schedule = [int(ceil(len(train_dataset)) / args.train_batch) * args.schedule[0],
                     int(ceil(len(train_dataset)) / args.train_batch) * args.schedule[1]]
 

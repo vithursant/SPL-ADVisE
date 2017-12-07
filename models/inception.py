@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
-
+import pdb
 
 __all__ = ['Inception3', 'inception_v3']
 
@@ -22,18 +22,38 @@ def inception_v3(pretrained=False, **kwargs):
     if pretrained:
         if 'transform_input' not in kwargs:
             kwargs['transform_input'] = True
-        model = Inception3(**kwargs)
-        model.load_state_dict(model_zoo.load_url(model_urls['inception_v3_google']))
+        original_model = Inception3()
+        original_model.load_state_dict(model_zoo.load_url(model_urls['inception_v3_google']))
+        model = FineTuneModel(original_model, arch='inceptionv3', **kwargs)
         return model
 
     return Inception3(**kwargs)
 
+class FineTuneModel(nn.Module):
+    def __init__(self, original_model, arch, num_classes, transform_input):
+        super(FineTuneModel, self).__init__()
+
+        if arch.startswith('inceptionv3'):
+            self.features = original_model
+            self.classifier = nn.Sequential(nn.Linear(2048, num_classes))
+            self.modelName = 'inceptionv3'
+
+        # Freeze those weights
+        for p in self.features.parameters():
+            p.requires_grad = False
+
+    def forward(self, x):
+        f = self.features(x)
+        y = self.classifier(f)
+
+        return y, f
 
 class Inception3(nn.Module):
 
-    def __init__(self, num_classes=1000, aux_logits=True, transform_input=False):
+    def __init__(self, num_classes=1000, aux_logits=True, transform_input=True):
         super(Inception3, self).__init__()
         self.aux_logits = aux_logits
+
         self.transform_input = transform_input
         self.Conv2d_1a_3x3 = BasicConv2d(3, 32, kernel_size=3, stride=2)
         self.Conv2d_2a_3x3 = BasicConv2d(32, 32, kernel_size=3)
@@ -81,6 +101,7 @@ class Inception3(nn.Module):
         x = self.Conv2d_2b_3x3(x)
         # 147 x 147 x 64
         x = F.max_pool2d(x, kernel_size=3, stride=2)
+        #print(x)
         # 73 x 73 x 64
         x = self.Conv2d_3b_1x1(x)
         # 73 x 73 x 80
@@ -103,6 +124,7 @@ class Inception3(nn.Module):
         x = self.Mixed_6d(x)
         # 17 x 17 x 768
         x = self.Mixed_6e(x)
+
         # 17 x 17 x 768
         if self.training and self.aux_logits:
             aux = self.AuxLogits(x)
@@ -118,14 +140,14 @@ class Inception3(nn.Module):
         x = F.dropout(x, training=self.training)
         # 1 x 1 x 2048
         x = x.view(x.size(0), -1)
-        features = x
+        #features = x
         # 2048
-        pdb.set_trace()
-        x = self.fc(x)
+        #pdb.set_trace()
+        #x = self.fc(x)
         # 1000 (num_classes)
-        if self.training and self.aux_logits:
-            return x, aux
-        return x, features
+        #if self.training and self.aux_logits:
+        #    return x, aux
+        return x
 
 
 class InceptionA(nn.Module):
@@ -301,6 +323,7 @@ class InceptionAux(nn.Module):
         self.fc.stddev = 0.001
 
     def forward(self, x):
+        #pdb.set_trace()
         # 17 x 17 x 768
         x = F.avg_pool2d(x, kernel_size=5, stride=3)
         # 5 x 5 x 768

@@ -13,13 +13,13 @@ import torch.nn as nn
 import torch.nn.init as init
 from torch.autograd import Variable
 
-__all__ = ['get_mean_and_std', 'init_params', 'mkdir_p', 'AverageMeter']
+__all__ = ['adjust_learning_rate', 'get_mean_and_std', 'init_params', 'mkdir_p', 'AverageMeter']
 
 def adjust_learning_rate(args, state, optimizer, epoch):
     if epoch in args.schedule:
-        state['lr'] *= args.gamma
+        state['learning_rate1'] *= args.gamma
         for param_group in optimizer.param_groups:
-            param_group['lr'] = state['lr']
+            param_group['lr'] = state['learning_rate1']
 
     return state
 

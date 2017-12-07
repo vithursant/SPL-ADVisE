@@ -99,7 +99,7 @@ def prepare_dataset(args, train_transform, test_transform):
         #                        transform=test_transform)
 
     elif args.dataset == 'cub2002010':
-        num_classes = 100
+        num_classes = 200
         num_channels = 3
         train_dataset = CUB200(root='/scratch/vthangar/',
                                             year=2010,

@@ -222,7 +222,7 @@ class ClusterBatchBuilder(object):
         for i, c in enumerate(clusters):
             #pdb.set_trace()
             # Go through each cluster and select random samples that are size self.d
-            x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)
+            x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x
@@ -254,19 +254,22 @@ class ClusterBatchBuilder(object):
 
         for cluster in range(self.num_classes*self.k):
             idx_incluster = self.cluster_assignments[cluster]
-            loss_incluster = np.sort(self.spld_cluster_ex_losses[cluster])
-            rank_incluster = np.sort(np.argsort(loss_incluster))+1
-
-            sort_idx = np.argsort(loss_incluster)
-            #total_count += 1
-            loss_incluster[sort_idx] -= diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster-1))
-
-            K = min([max_pos_len, len(loss_incluster)])
-            #selected_samples_idx[idx_incluster[np.argpartition(loss_incluster, K)[:K]]] = 1
-            selected_samples_idx[idx_incluster[:K]] = 1
-            #selected_samples_idx[idx_incluster[:len(loss_incluster)-1]] = 1
-            #m = torch.distributions.Normal(torch.Tensor(diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster-1))), torch.Tensor([1.0]))
             #pdb.set_trace()
+            if self.spld_cluster_ex_losses[cluster] is not None:
+                loss_incluster = np.sort(self.spld_cluster_ex_losses[cluster])
+                rank_incluster = np.sort(np.argsort(loss_incluster))+1
+
+                sort_idx = np.argsort(loss_incluster)
+                #total_count += 1
+                loss_incluster[sort_idx] -= diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster-1))
+
+                K = min([max_pos_len, len(loss_incluster)])
+                #selected_samples_idx[idx_incluster[np.argpartition(loss_incluster, K)[:K]]] = 1
+                selected_samples_idx[idx_incluster[:K]] = 1
+                #selected_samples_idx[idx_incluster[:len(loss_incluster)-1]] = 1
+                #m = torch.distributions.Normal(torch.Tensor(diversity_ratio * 1 / (np.sqrt(rank_incluster) + np.sqrt(rank_incluster-1))), torch.Tensor([1.0]))
+                #pdb.set_trace()
+        #pdb.set_trace()
         selected_samples_idx = np.where(selected_samples_idx == 1)
 
         # left_over = len(selected_samples_idx[0]) % batch_size

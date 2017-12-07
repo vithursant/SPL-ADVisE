@@ -1,0 +1,1 @@
+python trainer.py --random -a inceptionv3 --dataset cub2002010 --epochs 160 --schedule 81 122 --checkpoint checkpoints/cub2002010/1-random-inceptionv3 --data_augmentation --train-batch 32 --learning_rate1 0.01

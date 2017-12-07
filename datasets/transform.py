@@ -18,7 +18,7 @@ def preform_transform(args):
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
     train_transform = transforms.Compose([])
-
+    test_transform = transforms.Compose([])
     if args.data_augmentation:
         if args.dataset in ['mnist', 'fashionmnist']:
             train_transform.transforms.append(transforms.RandomCrop(28, padding=4))
@@ -26,7 +26,8 @@ def preform_transform(args):
             train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
         elif args.dataset in ['cub2002010', 'cub2002011']:
             #train_transform.transforms.append(transforms.Scale(64, padding=4))
-            train_transform.transforms.append(transforms.Resize((64, 64)))
+            train_transform.transforms.append(transforms.Resize((299, 299)))
+            test_transform.transforms.append(transforms.Resize((299,299)))
         else:
             train_transform.transforms.append(transforms.RandomCrop(32, padding=4))
 
@@ -35,8 +36,10 @@ def preform_transform(args):
     train_transform.transforms.append(transforms.ToTensor())
     train_transform.transforms.append(normalize)
 
-    test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        normalize])
+    test_transform.transforms.append(transforms.ToTensor())
+    test_transform.transforms.append(normalize)
+    # test_transform = transforms.Compose([
+    #     transforms.ToTensor(),
+    #     normalize])
     #pdb.set_trace()
     return train_transform, test_transform

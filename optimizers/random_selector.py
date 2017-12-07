@@ -11,6 +11,8 @@ import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "progress"))
 from progress.bar import Bar as Bar
 
+import pdb
+
 def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoint.pth.tar'):
     filepath = os.path.join(checkpoint, filename)
     torch.save(state, filepath)
@@ -39,8 +41,9 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda, updates):
 
         # compute output
         outputs, _ = model(inputs)
+        #pdb.set_trace()
         loss = criterion(outputs, targets)
-
+        #pdb.set_trace()
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
         losses.update(loss.data[0], inputs.size(0))
@@ -135,7 +138,7 @@ def random_selector(args, state, start_epoch, train_dataset, test_dataset, cnn, 
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=args.train_batch,
                                                shuffle=True,
-                                               num_workers=4)
+                                               num_workers=0)
 
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                               batch_size=args.train_batch,

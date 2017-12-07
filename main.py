@@ -30,7 +30,8 @@ from models.lenet import LeNet
 from models.magnet_lenet import MagnetLeNet
 from models.fashion_model import FashionSimpleNet
 from models.vgg_cifar import VGG
-from models.inception import Inception3
+#from models.inception import Inception3
+from models.inception import inception_v3
 from models.resnext import resnext
 from models.densenet import densenet
 #from models.vgg import *
@@ -82,6 +83,7 @@ elif args.model == 'resnet152':
     cnn = PreActResNet152(channels=num_channels, num_classes=num_classes)
 elif args.model == 'inceptionv3':
     cnn = Inception3(num_classes=num_classes)
+    #cnn = inception_v3(pretrained=True, num_classes=num_classes)
 elif args.model == 'vgg16':
     cnn = VGG(depth=16, num_classes=num_classes, channels=num_channels)
 elif args.model == 'wideresnet':
@@ -138,7 +140,7 @@ if args.leap or args.magnet:
 
 if not args.leap:
     cnn = torch.nn.DataParallel(cnn).cuda()
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss().cuda()
 
 cnn_optimizer = torch.optim.SGD(cnn.parameters(), lr=args.learning_rate1,
                                 momentum=0.9, nesterov=True, weight_decay=5e-4)
