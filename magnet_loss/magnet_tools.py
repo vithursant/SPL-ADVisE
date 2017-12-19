@@ -106,7 +106,8 @@ class ClusterBatchBuilder(object):
         # TODO: for SVHN fix class labels to start from 1 to 11
         for class_idx in range(self.num_classes):
             if dataset == 'svhn':
-                pdb.set_trace()
+                if class_idx == 10:
+                    class_idx = 0
                 class_mask = self.labels == class_idx+1 # Boolean mask for selecting examples
                 #pdb.set_trace()
                 class_examples = rep_data[class_mask] # Mask features based on the class mask
