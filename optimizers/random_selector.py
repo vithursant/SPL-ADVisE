@@ -147,7 +147,7 @@ def random_selector(args, state, start_epoch, train_dataset, test_dataset, cnn, 
 
     for epoch in range(start_epoch, args.epochs):
         state = adjust_learning_rate(args, state, optimizer, epoch)
-        print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, state['learning_rate1']))
+        print(args.dataset + ' RANDOM ' + 'Epoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, state['learning_rate1']))
 
         train_loss, train_acc, updates = train(train_loader, cnn, criterion, optimizer, epoch, use_cuda, updates)
         test_loss, test_acc = test(test_loader, cnn, criterion, epoch, use_cuda)

@@ -1,1 +1,15 @@
-python trainer.py --random -a preresnet --dataset cifar100 --depth 110 --epochs 164 --schedule 81 122 --gamma 0.1 --wd 1e-4 --checkpoint checkpoints/cifar100/1-random-preresnet-110 
+python  trainer.py \
+        -a densenet \
+        --dataset cifar100 \
+        --depth 100 \
+        --growthRate 12 \
+        --train-batch 64 \
+        --epochs 300 \
+        --schedule 150 225 \
+        --wd 1e-4 \
+        --gamma 0.1 \
+        --checkpoint checkpoints/cifar100/1-densenet-bc-100-12 \
+        --num-classes 100 \
+        --learning_rate1 0.1 \
+        --data_augmentation \
+        --random

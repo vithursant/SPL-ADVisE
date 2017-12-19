@@ -1,0 +1,1 @@
+python trainer.py --leap --model inceptionv3 --embedding-model inceptionv3 --dataset cub2002010 --epochs 164 --max-iter 100 --schedule 81 122 --checkpoint checkpoints/cub2002010/1-leap-inceptionv3 --data_augmentation --train-batch 32 --learning_rate1 0.01 --num-classes 200 --plot --plot-num-samples 2000 --plot-interval 100

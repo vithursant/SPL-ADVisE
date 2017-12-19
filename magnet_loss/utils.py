@@ -32,25 +32,27 @@ def show_images(H):
     for i in range(num):
         grid[i].axis('off')
         grid[i].imshow(H[i], cmap='Greys')
-        
+
     # Turn any unused axes off
     for j in range(i, len(grid)):
         grid[j].axis('off')
 
 
-def plot_embedding(X, y, imgs=None, title=None, name=None):
+def plot_embedding(X, y, imgs=None, title=None, name=None, num_classes=None):
     #pdb.set_trace()
     # Adapted from http://scikit-learn.org/stable/auto_examples/manifold/plot_lle_digits.html
+    #pdb.set_trace()
     x_min, x_max = np.min(X, 0), np.max(X, 0)
     X = (X - x_min) / (x_max - x_min)
 
     # Plot colors numbers
     plt.figure(figsize=(10,10))
     ax = plt.subplot(111)
+    #pdb.set_trace()
     for i in range(X.shape[0]):
         # plot colored number
         plt.text(X[i, 0], X[i, 1], str(y[i]),
-                 color=plt.cm.Set1(y[i] / 10.),
+                 color=plt.cm.Set1(y[i] / float(num_classes)),
                  fontdict={'weight': 'bold', 'size': 9})
 
     # Add image overlays

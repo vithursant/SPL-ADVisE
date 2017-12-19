@@ -112,16 +112,9 @@ def prepare_dataset(args, train_transform, test_transform):
                                            train=False,
                                            transform=test_transform,
                                            download=True)
-        # train_dataset = CUB2002010(root='/scratch/vthangar/',
-        #                                     train=True,
-        #                                     transform=train_transform,
-        #                                     download=True)
-        # test_dataset = CUB2002010(root='/scratch/vthangar/',
-        #                                    train=False,
-        #                                    transform=test_transform,
-        #                                    download=True)
+
     elif args.dataset == 'cub2002011':
-        num_classes = 100
+        num_classes = 200
         num_channels = 3
         train_dataset = CUB200(root='/scratch/vthangar/',
                                             year=2011,
@@ -129,9 +122,9 @@ def prepare_dataset(args, train_transform, test_transform):
                                             transform=train_transform,
                                             download=True)
         test_dataset = CUB200(root='/scratch/vthangar/',
-                                            year=2011,
-                                            train=True,
-                                           transform=test_transform,
-                                           download=True)
+                              year=2011,
+                              train=False,
+                              transform=test_transform,
+                              download=True)
 
     return num_classes, num_channels, train_dataset, test_dataset

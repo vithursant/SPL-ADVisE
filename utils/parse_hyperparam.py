@@ -26,7 +26,8 @@ magnet_names = ['vgg11',
                 'wideresnet',
                 'lenet',
                 'magnetlenet',
-                'magnetfashion']
+                'magnetfashion',
+                'inceptionv3']
 
 dataset_names = [   'cifar10',
                     'cifar100',
@@ -87,6 +88,10 @@ def parse_settings():
     # Checkpoints
     parser.add_argument('--plot', action='store_true', default=False,
                         help='Plot clustering')
+    parser.add_argument('--plot-interval', type=int, default=1000,
+                        help='Interval to plot for MagnetLoss')
+    parser.add_argument('--plot-num-samples', type=int, default=8000,
+                        help='Number of samples to plot for MagnetLoss')
     parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH',
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',

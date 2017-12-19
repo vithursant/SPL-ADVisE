@@ -65,10 +65,10 @@ def train_magnet(   args,
                     test_id):
 
     # magnet loss parameters
-    k = 8
-    m = 8
-    d = 8
-    alpha = 1.0
+    k = 1
+    m = 30
+    d = 30
+    alpha = 3.52
 
     updates = 0
     batch_losses = []
@@ -138,7 +138,8 @@ def leap_selector(  args,
                     logger):
 
     global spld_params
-
+    #args.train_batch = 64
+    # Magnet Loss
     if not os.path.exists('leap_results'):
         os.makedirs('leap_results')
     if not os.path.exists('leap_results/magnet'):
@@ -155,12 +156,6 @@ def leap_selector(  args,
     args.train_batch = 64
     n_train = len(train_dataset)
 
-    # magnet loss parameters
-    k = 8
-    m = 8
-    d = 8
-    alpha = 1.0
-
     train_sampler = SubsetSequentialSampler(range(len(train_dataset)), range(args.train_batch))
     train_loader = DataLoader(train_dataset,
                              batch_size=args.train_batch,
@@ -173,28 +168,26 @@ def leap_selector(  args,
                             shuffle=True,
                             num_workers=4)
 
-    embedding_optimizer = torch.optim.Adam(embedding_model.parameters(), lr=args.learning_rate2)
+    # magnet loss parameters
+    k = 8
+    m = 8
+    d = 8
+    alpha = 1.0
+
+    embedding_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, embedding_model.parameters()), lr=args.learning_rate2)
     minibatch_magnet_loss = MagnetLoss()
 
     if args.dataset == 'svhn':
-        labels = train_dataset.labels
-        labels = np.hstack(labels)
+        labels = train_dataset.labels.flatten()
     elif args.dataset == 'cub2002010':
         labels = [int(i[1]) for i in train_dataset.imgs]
     else:
         labels = getattr(train_dataset, 'train_labels')
-    #pdb.set_trace()
+
     if args.dataset == 'svhn':
         initial_reps = compute_reps(embedding_model, train_dataset, 4680)
     else:
         initial_reps = compute_reps(embedding_model, train_dataset, 1000)
-
-    if args.dataset in ['mnist', 'fashionmnist']:
-        n_epochs = 15
-    elif args.dataset in ['cifar10', 'cifar100', 'svhn']:
-        n_epochs = 30
-    elif args.dataset in ['tinyimagenet']:
-        n_epochs = 50
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(args.dataset, initial_reps, max_iter=args.max_iter)
@@ -202,45 +195,107 @@ def leap_selector(  args,
     batch_example_inds, batch_class_inds = batch_builder.gen_batch()
     train_loader.sampler.batch_indices = batch_example_inds.astype(np.int32)
 
+    if args.dataset in ['mnist', 'fashionmnist']:
+        n_epochs = 15
+    elif args.dataset in ['cifar10', 'cifar100', 'svhn']:
+        n_epochs = 50
+    elif args.dataset in ['tinyimagenet']:
+        n_epochs = 50
+    elif args.dataset in ['cub2002010', 'cub2002011']:
+        n_epochs = 50
+
     epoch_steps = int(ceil(float(len(train_dataset) / args.train_batch)))
     #epoch_steps = len(train_loader)
     n_steps = epoch_steps * n_epochs
     cluster_refresh_interval = epoch_steps
 
+    if args.dataset in ['svhn']:
+        n_steps = 8000
+
     _ = embedding_model.train()
 
-    train_magnet(   args,
-                    embedding_model,
-                    embedding_optimizer,
-                    train_dataset,
-                    train_loader,
-                    minibatch_magnet_loss,
-                    batch_class_inds,
-                    batch_example_inds,
-                    leap_magnet_logger,
-                    batch_builder,
-                    n_steps,
-                    cluster_refresh_interval,
-                    labels,
-                    test_id)
+    updates = 0
+    batch_losses = []
+    progress_bar = tqdm(range(n_steps))
+    for i in progress_bar:
+        batch_loss_avg = 0.
+        for batch_idx, (images, targets) in enumerate(train_loader):
+            #progress_bar.set_description('Epoch ' + str(updates))
+            images = Variable(images).cuda()
+            targets = Variable(targets).cuda()
 
+            embedding_model.zero_grad()
+            pred, _ = embedding_model(images)
+
+            batch_loss, batch_example_losses = minibatch_magnet_loss(pred,
+                                                                    batch_class_inds,
+                                                                    m,
+                                                                    d,
+                                                                    alpha)
+            batch_loss.backward()
+            embedding_optimizer.step()
+
+            batch_loss_avg += batch_loss.data[0]
+            updates += 1
+
+        progress_bar.set_postfix(magnetloss='%.3f' % (batch_loss_avg / (batch_idx + 1)))
+
+        batch_builder.update_losses(batch_example_inds,
+                                    batch_example_losses, 'magnet')
+
+        batch_losses.append(batch_loss.data[0])
+
+        if not i % cluster_refresh_interval:
+            print("Refreshing clusters")
+            if args.dataset == 'svhn':
+                reps = compute_reps(embedding_model, train_dataset, 4680)
+            else:
+                reps = compute_reps(embedding_model, train_dataset, 400)
+            batch_builder.update_clusters(args.dataset, reps, max_iter=args.max_iter)
+
+        if args.plot:
+            if not i % args.plot_interval:
+                n_plot = args.plot_num_samples
+                if args.dataset == 'svhn':
+                    plot_embedding( compute_reps(embedding_model, train_dataset, 4680)[:n_plot],
+                                    labels[:n_plot],
+                                    name='leap_results/magnet/' + args.dataset + '_leap_magnet_log_' + test_id + '_' + str(i),
+                                    num_classes=args.num_classes)
+                else:
+                    plot_embedding(compute_reps(embedding_model, train_dataset, 1000)[:n_plot],
+                                                labels[:n_plot],
+                                                name='leap_results/magnet/' + args.dataset + '_leap_magnet_log_' + test_id + '_' + str(i),
+                                                num_classes=args.num_classes)
+
+        batch_example_inds, batch_class_inds = batch_builder.gen_batch()
+        train_loader.sampler.batch_indices = batch_example_inds
+
+        row = {'epoch': str(updates), 'batch_loss': str(batch_loss.data[0])}
+        leap_magnet_logger.writerow(row)
+
+    if args.plot:
+        plot_smooth(batch_losses, args.dataset + '_' + test_id + '_batch-losses')
+
+    leap_magnet_logger.close()
+
+    # Student CNN
     student_model = torch.nn.DataParallel(student_model).cuda()
 
     if args.dataset in ['cifar10', 'cifar100', 'svhn']:
-        args.batch_size = 128
+        args.train_batch = 128
     else:
-        args.batch_size = 64
+        args.train_batch = 64
 
     train_sampler = SubsetSequentialSampler(range(len(train_dataset)), range(len(train_dataset)))
     train_loader = DataLoader(train_dataset,
-                             batch_size=args.batch_size,
+                             batch_size=args.train_batch,
                              shuffle=False,
                              num_workers=4,
                              pin_memory=True,
                              sampler=train_sampler)
 
     test_loader = DataLoader(test_dataset,
-                            batch_size=args.batch_size,
+                            batch_size=args.train_batch,
                             shuffle=False,
                             pin_memory=True,
                             num_workers=4)
@@ -252,7 +307,7 @@ def leap_selector(  args,
     updates = 0
     num_samples = 0
 
-    epoch_steps = int(ceil(len(train_dataset)) / args.batch_size)
+    epoch_steps = int(ceil(len(train_dataset)) / args.train_batch)
     n_steps = epoch_steps * 15
 
     if args.dataset in ['cifar10', 'cifar100', 'svhn']:
@@ -277,10 +332,18 @@ def leap_selector(  args,
     updates = 0
     for i in range(n_steps):
         state = adjust_learning_rate(args, state, optimizer, i)
-        print('\Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
+        print(args.dataset + ' LEAP ' + 'Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
 
         train_loss, train_acc, updates = train_student(args, student_model, train_loader, optimizer, use_cuda, updates, batch_builder, batch_train_inds)
         test_loss, test_acc = test_student(test_loader, student_model, criterion, use_cuda)
+
+        batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.train_batch)
+        train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
+
+        # Increase the learning pace
+        spld_params[0] *= (1+spld_params[2])
+        spld_params[0] = int(round(spld_params[0]))
+        spld_params[1] *= (1+spld_params[3])
 
         # append logger file
         logger.append([updates, state['learning_rate1'], train_loss, test_loss, train_acc, test_acc])
@@ -295,6 +358,18 @@ def leap_selector(  args,
                 'best_acc': best_acc,
                 'optimizer' : optimizer.state_dict(),
             }, is_best, checkpoint=args.checkpoint)
+
+        if args.dataset == 'cifar10':
+            if updates >= 200*390:
+                break
+
+        elif args.dataset in ['mnist','fashionmnist']:
+            if updates >= 60*390:
+                break
+
+        elif args.dataset in ['svhn']:
+            if updates >= 15000:
+                break
 
     logger.close()
     logger.plot()
@@ -377,14 +452,6 @@ def train_student(args, model, trainloader, optimizer, use_cuda, updates, batch_
                     )
         bar.next()
     bar.finish()
-
-    batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.train_batch)
-    trainloader.sampler.batch_indices = batch_train_inds.astype(np.int32)
-
-    # Increase the learning pace
-    spld_params[0] *= (1+spld_params[2])
-    spld_params[0] = int(round(spld_params[0]))
-    spld_params[1] *= (1+spld_params[3])
 
     return (losses.avg, top1.avg, updates)
 

@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import torchvision
 
 from utils.misc import adjust_learning_rate
 from utils.eval import *
@@ -110,16 +111,9 @@ def train(args, trainloader, model, criterion, optimizer, use_cuda, updates, bat
                     top5=top5.avg,
                     )
         bar.next()
+
+        torchvision.utils.save_image(inputs.data, args.checkpoint + '.jpg', normalize=True)
     bar.finish()
-
-    batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.train_batch)
-    #pdb.set_trace()
-    trainloader.sampler.batch_indices = batch_train_inds.astype(np.int32)
-
-    # Increase the learning pace
-    spld_params[0] *= (1+spld_params[2])
-    spld_params[0] = int(round(spld_params[0]))
-    spld_params[1] *= (1+spld_params[3])
 
     return (losses.avg, top1.avg, updates)
 
@@ -202,14 +196,18 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
                                               num_workers=4)
 
     batch_train_inds = np.random.choice(range(len(train_dataset)), len(train_dataset), replace=False)
-    train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
+    batch_train_inds = batch_train_inds.astype(np.int32)
+    train_loader.sampler.batch_indices = batch_train_inds
 
     if args.dataset in ['cifar10', 'svhn']:
-        spld_params = [50, 5e-1, 1e-1, 1e-1]
+        spld_params = [500, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['cifar100']:
         spld_params = [50, 5e-1, 1e-1, 1e-1]
-    elif args.dataset in ['cub2002010']:
-        spld_params = [5, 5e-1, 1e-1, 1]
+    elif args.dataset in ['cub2002010', 'cub2002011']:
+        k = 8
+        m = 8
+        d = 30
+        spld_params = [5, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['mnist', 'fashionmnist']:
         #spld_params = [500, 1e-3, 5e-2, 1e-1]
         spld_params = [500, 5e-1, 1e-1, 1e-1]
@@ -217,7 +215,7 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
     if args.dataset == 'svhn':
         labels = train_dataset.labels
         labels = np.hstack(labels)
-    elif args.dataset == 'cub2002010':
+    elif args.dataset in ['cub2002010', 'cub2002011']:
         labels = [int(i[1]) for i in train_dataset.imgs]
     else:
         labels = getattr(train_dataset, 'train_labels')
@@ -239,10 +237,19 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
 
     for i in range(n_steps):
         state = adjust_learning_rate(args, state, optimizer, i)
-        print('\Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
+        print(args.dataset + ' SPLD ' + 'Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
 
         train_loss, train_acc, updates = train(args, train_loader, cnn, criterion, optimizer, use_cuda, updates, batch_builder, batch_train_inds)
         test_loss, test_acc = test(test_loader, cnn, criterion, use_cuda)
+
+        batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.train_batch)
+        np.random.shuffle(batch_train_inds)
+        train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
+
+        # Increase the learning pace
+        spld_params[0] *= (1+spld_params[2])
+        spld_params[0] = int(round(spld_params[0]))
+        spld_params[1] *= (1+spld_params[3])
 
         # append logger file
         logger.append([updates, state['learning_rate1'], train_loss, test_loss, train_acc, test_acc])

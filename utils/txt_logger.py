@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import numpy as np
+import pdb
 
 __all__ = ['Logger', 'LoggerMonitor', 'savefig']
 
@@ -42,6 +43,7 @@ class Logger(object):
                 self.file.close()
                 self.file = open(fpath, 'a')
             else:
+                #pdb.set_trace()
                 self.file = open(fpath, 'w')
 
     def set_names(self, names):

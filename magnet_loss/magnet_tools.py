@@ -89,7 +89,7 @@ class ClusterBatchBuilder(object):
         #pdb.set_trace()
 
 
-    def update_clusters(self, dataset, rep_data, max_iter=20):
+    def update_clusters(self, dataset, rep_data, max_iter=300):
         """
         Given an array of representations for the entire training set,
         recompute clusters and store example cluster assignments in a
@@ -114,7 +114,7 @@ class ClusterBatchBuilder(object):
                 #pdb.set_trace()
                 class_examples = rep_data[class_mask] # Mask features based on the class mask
 
-            kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
+            kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=10, max_iter=max_iter)
             kmeans.fit(class_examples)
             #pdb.set_trace()
 
@@ -222,7 +222,7 @@ class ClusterBatchBuilder(object):
         for i, c in enumerate(clusters):
             #pdb.set_trace()
             # Go through each cluster and select random samples that are size self.d
-            x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
+            x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x
