@@ -157,8 +157,8 @@ def main():
             embedding_cnn = PreActResNet152(channels=num_channels, num_classes=num_classes)
         elif args.embedding_model == 'vgg16':
             num_classes = 2
-            #embedding_cnn = VGG(depth=16, num_classes=num_classes, channels=num_channels)
-            embedding_cnn = vgg16(pretrained=True, num_classes=num_classes)
+            embedding_cnn = VGG(depth=16, num_classes=num_classes,              channels=num_channels)
+            #embedding_cnn = vgg16(pretrained=True, num_classes=num_classes)
         elif args.embedding_model == 'vgg11':
             num_classes = 2
             embedding_cnn = vgg11(num_classes)
