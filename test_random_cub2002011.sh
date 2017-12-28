@@ -4,7 +4,7 @@ python  trainer.py \
         --dataset cub2002011 \
         --epochs 160 \
         --schedule 81 122 \
-        --checkpoint checkpoints/cub2002011/random-inceptionv3-b32-lr01-dataaug \
+        --checkpoint checkpoints/cub2002011/random-inceptionv3-b32-lr01-dataaug-iclr \
         --data_augmentation \
         --train-batch 32 \
         --learning_rate1 0.01 \
