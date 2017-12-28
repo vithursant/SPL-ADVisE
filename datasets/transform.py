@@ -23,11 +23,14 @@ def preform_transform(args):
         if args.dataset in ['mnist', 'fashionmnist']:
             train_transform.transforms.append(transforms.RandomCrop(28, padding=4))
         elif args.dataset == 'tinyimagenet':
-            #train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
-            train_transform.transforms.append(transforms.Scale(72))
-            train_transform.transforms.append(transforms.RandomResizedCrop(64))
-            test_transform.transforms.append(transforms.Scale(72))
-            test_transform.transforms.append(transforms.CenterCrop(64))
+            # train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
+            train_transform.transforms.append(transforms.Resize((64, 64)))
+            test_transform.transforms.append(transforms.Resize((64, 64)))
+            #test_transform.transforms.append(transforms.Random)
+            #train_transform.transforms.append(transforms.Scale(72))
+            #train_transform.transforms.append(transforms.RandomResizedCrop(64))
+            #test_transform.transforms.append(transforms.Scale(72))
+            #test_transform.transforms.append(transforms.CenterCrop(64))
         elif args.dataset in ['cub2002010', 'cub2002011']:
             #train_transform.transforms.append(transforms.Scale(64, padding=4))
             train_transform.transforms.append(transforms.Resize((299, 299)))
