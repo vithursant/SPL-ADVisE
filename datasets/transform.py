@@ -24,9 +24,9 @@ def preform_transform(args):
             train_transform.transforms.append(transforms.RandomCrop(28, padding=4))
         elif args.dataset == 'tinyimagenet':
             # train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
-            train_transform.transforms.append(transforms.Resize((224, 224)))
-            train_transform.transforms.append(transforms.RandomResizedCrop(224))
-            test_transform.transforms.append(transforms.Resize((224, 224)))
+            train_transform.transforms.append(transforms.Resize((64, 64)))
+            train_transform.transforms.append(transforms.RandomResizedCrop(57))
+            test_transform.transforms.append(transforms.Resize((64, 64)))
             #test_transform.transforms.append(transforms.Random)
             #train_transform.transforms.append(transforms.Scale(72))
             #train_transform.transforms.append(transforms.RandomResizedCrop(64))

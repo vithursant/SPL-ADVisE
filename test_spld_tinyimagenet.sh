@@ -9,7 +9,7 @@ python  trainer.py \
          --schedule 150 225 \
          --gamma 0.1 \
          --wd 1e-4 \
-         --train-batch 256 \
+         --train-batch 128 \
          --learning_rate1 0.001 \
-         --checkpoint checkpoints/tinyimagenet/random-resnet18-bc-100-12-lr0001-b256-dataaug-iclr \
-         --random
+         --checkpoint checkpoints/tinyimagenet/spld-resnet18-bc-100-12-lr0001-b128-dataaug-iclr \
+         --spld
