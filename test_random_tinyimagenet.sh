@@ -11,5 +11,5 @@ python  trainer.py \
          --wd 1e-4 \
          --train-batch 128 \
          --learning_rate1 0.001 \
-         --checkpoint checkpoints/tinyimagenet/random-resnet18-bc-100-12-lr0001-b50-dataaug \
+         --checkpoint checkpoints/tinyimagenet/random-resnet18-bc-100-12-lr0001-b50-dataaug-iclr \
          --random
