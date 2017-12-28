@@ -40,6 +40,7 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda, updates):
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
         # compute output
+        #pdb.set_trace()
         outputs, _ = model(inputs)
         #pdb.set_trace()
         loss = criterion(outputs, targets)

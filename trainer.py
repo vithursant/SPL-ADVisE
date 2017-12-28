@@ -41,6 +41,7 @@ from models.inception import inception_v3
 from models.resnext import resnext
 from models.densenet import densenet
 from models.preresnet import preresnet
+from models.resnet_tinyimagenet import ResNet18_TinyImagenet
 #from models.vgg import *
 
 from datasets.transform import *
@@ -107,7 +108,10 @@ def main():
     print("==> Creating model '{}'".format(args.model))
 
     if args.model == 'resnet18':
-        cnn = PreActResNet18(channels=num_channels, num_classes=num_classes)
+        if args.dataset == 'tinyimagenet':
+            cnn = ResNet18_TinyImagenet()
+        else:
+            cnn = PreActResNet18(channels=num_channels, num_classes=num_classes)
     elif args.model == 'resnet34':
         cnn = PreActResNet34(channels=num_channels, num_classes=num_classes)
     elif args.model == 'resnet50':
@@ -157,8 +161,8 @@ def main():
             embedding_cnn = PreActResNet152(channels=num_channels, num_classes=num_classes)
         elif args.embedding_model == 'vgg16':
             num_classes = 2
-            embedding_cnn = VGG(depth=16, num_classes=num_classes,              channels=num_channels)
-            #embedding_cnn = vgg16(pretrained=True, num_classes=num_classes)
+            #embedding_cnn = VGG(depth=16, num_classes=num_classes, channels=num_channels)
+            embedding_cnn = vgg16(pretrained=True, num_classes=num_classes)
         elif args.embedding_model == 'vgg11':
             num_classes = 2
             embedding_cnn = vgg11(num_classes)
@@ -179,7 +183,7 @@ def main():
             num_classes = 2
             embedding_cnn = FashionSimpleNet(num_classes)
 
-    cnn = torch.nn.DataParallel(cnn).cuda()
+    cnn = torch.nn.DataParallel(cnn, device_ids=range(torch.cuda.device_count())).cuda()
     cudnn.benchmark = True
 
     print('    Total params: %.2fM' % (sum(p.numel() for p in cnn.parameters())/1000000.0))

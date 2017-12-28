@@ -13,7 +13,7 @@ def preform_transform(args):
     elif args.dataset in ['mnist', 'fashionmnist']:
         normalize = transforms.Normalize((0.1307,), (0.3081,))
     elif args.dataset in ['tinyimagenet']:
-        normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     elif args.dataset in ['cub2002010', 'cub2002011']:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
@@ -23,7 +23,11 @@ def preform_transform(args):
         if args.dataset in ['mnist', 'fashionmnist']:
             train_transform.transforms.append(transforms.RandomCrop(28, padding=4))
         elif args.dataset == 'tinyimagenet':
-            train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
+            #train_transform.transforms.append(transforms.RandomCrop(64, padding=4))
+            train_transform.transforms.append(transforms.Scale(72))
+            train_transform.transforms.append(transforms.RandomResizedCrop(64))
+            test_transform.transforms.append(transforms.Scale(72))
+            test_transform.transforms.append(transforms.CenterCrop(64))
         elif args.dataset in ['cub2002010', 'cub2002011']:
             #train_transform.transforms.append(transforms.Scale(64, padding=4))
             train_transform.transforms.append(transforms.Resize((299, 299)))
