@@ -35,7 +35,7 @@ def preform_transform(args):
         elif args.dataset in ['cub2002010', 'cub2002011']:
             #train_transform.transforms.append(transforms.Scale(64, padding=4))
             train_transform.transforms.append(transforms.Resize((299, 299)))
-            train_transform.transforms.append(transforms.CenterCrop(10))
+            train_transform.transforms.append(transforms.CenterCrop(299))
             test_transform.transforms.append(transforms.Resize((299, 299)))
         else:
             train_transform.transforms.append(transforms.RandomCrop(32, padding=4))
