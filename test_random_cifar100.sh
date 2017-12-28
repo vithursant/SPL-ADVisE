@@ -1,15 +1,15 @@
 python  trainer.py \
-        -a densenet \
         --dataset cifar100 \
+        --num-classes 100 \
+        --data_augmentation \
+        --model densenet \
         --depth 100 \
         --growthRate 12 \
-        --train-batch 64 \
         --epochs 300 \
         --schedule 150 225 \
-        --wd 1e-4 \
         --gamma 0.1 \
-        --checkpoint checkpoints/cifar100/1-densenet-bc-100-12 \
-        --num-classes 100 \
+        --wd 1e-4 \
+        --train-batch 64 \
         --learning_rate1 0.1 \
-        --data_augmentation \
+        --checkpoint checkpoints/cifar100/random-densenet-bc-100-12-lr01-b128-dataaug-iclr \
         --random

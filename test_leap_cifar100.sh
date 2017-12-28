@@ -1,5 +1,3 @@
-# python trainer.py --spld -a preresnet --dataset cifar100 --depth 110 --epochs 164 --schedule 81 122 --gamma 0.1 --wd 1e-4 --checkpoint checkpoints/cifar100/1-spld-preresnet-110
-
 python  trainer.py \
         --dataset cifar100 \
         --num-classes 100 \
@@ -13,5 +11,8 @@ python  trainer.py \
         --wd 1e-4 \
         --train-batch 64 \
         --learning_rate1 0.1 \
-        --checkpoint checkpoints/cifar100/spld-densenet-bc-100-12-lr01-b128-dataaug-iclr \
-        --spld
+        --learning_rate2 0.001 \
+        --embedding-model vgg16 \
+        --checkpoint checkpoints/cifar100/leapdensenet-bc-100-12-vgg16-lr01-b128-dataaug-magnetloss-iclr \
+        --leap \
+        --plot
