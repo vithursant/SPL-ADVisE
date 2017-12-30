@@ -12,6 +12,7 @@ import shutil
 from time import gmtime, strftime
 
 import torch
+import torch.optim as optim
 import torchvision
 import torch.nn as nn
 from torchvision.utils import make_grid

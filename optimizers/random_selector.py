@@ -1,4 +1,5 @@
 import torch
+import torch.optim as optim
 
 from utils.misc import adjust_learning_rate, learning_rate_cifar
 from utils.eval import *
