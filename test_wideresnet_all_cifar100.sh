@@ -4,10 +4,10 @@ python  trainer.py \
         --data_augmentation \
         --model wideresnet \
         --depth 28 \
-        --widen_factor 10 \
+        --widen-factor 10 \
         --dropout_rate 0.3 \
         --epochs 200 \
-        --schedule 150 225 \
+        --schedule 60 120 160 \
         --gamma 0.1 \
         --wd 5e-4 \
         --train-batch 128 \
