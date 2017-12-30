@@ -15,5 +15,5 @@ python  trainer.py \
         --learning_rate2 0.001 \
         --embedding-model vgg16 \
         --checkpoint checkpoints/cifar100/leap-wideresnet-wf-10-d-28-lr01-b128-dataaug-iclr \
-        --leap
+        --leap \
         --plot

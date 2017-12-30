@@ -251,7 +251,7 @@ def vgg16(pretrained=False, **kwargs):
         original_model = VGG(make_layers(cfg['D']))
         original_model.load_state_dict(model_zoo.load_url(model_urls['vgg16']))
         model = FineTuneModel(original_model, arch='vgg16', **kwargs)
-        pdb.set_trace()
+        #pdb.set_trace()
         return model
     return VGG(make_layers(cfg['D']), **kwargs)
 
