@@ -236,8 +236,12 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
                     int(ceil(len(train_dataset)) / args.train_batch) * args.schedule[1]]
 
     for i in range(n_steps):
-        state = adjust_learning_rate(args, state, optimizer, i)
-        print(args.dataset + ' SPLD ' + 'Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
+        if args.dataset in ['cifar10', 'cifar100']:
+            optimizer = optim.SGD(cnn.parameters(), lr=learning_rate_cifar(args.learning_rate1, epoch), momentum=0.9, weight_decay=5e-4)
+            print('SPLD LR: %f' % (learning_rate_cifar(args.learning_rate1, i)))
+        else:
+            state = adjust_learning_rate(args, state, optimizer, i)
+            print(args.dataset + ' SPLD ' + 'Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
 
         train_loss, train_acc, updates = train(args, train_loader, cnn, criterion, optimizer, use_cuda, updates, batch_builder, batch_train_inds)
         test_loss, test_acc = test(test_loader, cnn, criterion, use_cuda)
