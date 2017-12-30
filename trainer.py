@@ -131,7 +131,7 @@ def main():
         if args.dataset == 'svhn':
             cnn = Wide_ResNet(depth=16, num_classes=num_classes, widen_factor=8, dropout_rate=args.dropout_rate)
         else:
-            cnn = Wide_ResNet(depth=28, num_classes=num_classes, widen_factor=10, dropout_rate=args.dropout_rate)
+            cnn = Wide_ResNet(depth=28, widen_factor=10, dropout_rate=args.dropout_rate, num_classes=num_classes)
     elif args.model == 'lenet':
         cnn = LeNet()
     elif args.model == 'magnetlenet':

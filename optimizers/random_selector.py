@@ -1,6 +1,6 @@
 import torch
 
-from utils.misc import adjust_learning_rate
+from utils.misc import adjust_learning_rate, learning_rate_cifar
 from utils.eval import *
 from utils.misc import *
 import time
@@ -147,8 +147,12 @@ def random_selector(args, state, start_epoch, train_dataset, test_dataset, cnn, 
                                               num_workers=4)
 
     for epoch in range(start_epoch, args.epochs):
-        state = adjust_learning_rate(args, state, optimizer, epoch)
-        print(args.dataset + ' RANDOM ' + 'Epoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, state['learning_rate1']))
+        if args.dataset in ['cifar10', 'cifar100']:
+            optimizer = optim.SGD(cnn.parameters(), lr=learning_rate_cifar(args.lr, epoch), momentum=0.9, weight_decay=5e-4)
+            print('RANDOM LR: %f' % (learning_rate_cifar(args.lr, epoch)))
+        else:
+            state = adjust_learning_rate(args, state, optimizer, epoch)
+            print(args.dataset + ' RANDOM ' + 'Epoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, state['learning_rate1']))
 
         train_loss, train_acc, updates = train(train_loader, cnn, criterion, optimizer, epoch, use_cuda, updates)
         test_loss, test_acc = test(test_loader, cnn, criterion, epoch, use_cuda)

@@ -7,9 +7,12 @@ def preform_transform(args):
     if args.dataset == 'svhn':
         normalize = transforms.Normalize(mean=[x / 255.0 for x in[109.9, 109.7, 113.8]],
                                          std=[x / 255.0 for x in [50.1, 50.6, 50.8]])
-    elif args.dataset in ['cifar10', 'cifar100']:
+    elif args.dataset in ['cifar10']:
         normalize = transforms.Normalize(mean=[x / 255.0 for x in [125.3, 123.0, 113.9]],
                                          std=[x / 255.0 for x in [63.0, 62.1, 66.7]])
+    elif args.dataset in ['cifar100']:
+        normalize = transforms.Normalize(mean=(0.5071, 0.4867, 0.4408),
+                                        std=(0.2675, 0.2565, 0.2761))
     elif args.dataset in ['mnist', 'fashionmnist']:
         normalize = transforms.Normalize((0.1307,), (0.3081,))
     elif args.dataset in ['tinyimagenet']:
