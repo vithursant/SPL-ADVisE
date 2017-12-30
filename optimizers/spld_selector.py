@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torchvision
+import torch.optim as optim
 
 from utils.misc import adjust_learning_rate
 from utils.eval import *
