@@ -238,7 +238,7 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
 
     for i in range(n_steps):
         if args.dataset in ['cifar10', 'cifar100']:
-            optimizer = optim.SGD(cnn.parameters(), lr=learning_rate_cifar(args.learning_rate1, epoch), momentum=0.9, weight_decay=5e-4)
+            optimizer = optim.SGD(cnn.parameters(), lr=learning_rate_cifar(args.learning_rate1, i), momentum=0.9, weight_decay=5e-4)
             print('SPLD LR: %f' % (learning_rate_cifar(args.learning_rate1, i)))
         else:
             state = adjust_learning_rate(args, state, optimizer, i)
