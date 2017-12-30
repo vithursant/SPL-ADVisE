@@ -3,8 +3,9 @@ from torch.autograd import Variable
 import torchvision
 import torch.nn.functional as F
 import torch.nn as nn
+import torch.optim as optim
 
-from utils.misc import adjust_learning_rate
+from utils.misc import adjust_learning_rate, learning_rate_cifar
 from utils.eval import *
 from utils.misc import *
 
@@ -331,8 +332,12 @@ def leap_selector(  args,
     best_acc = 0  # best test accuracy
     updates = 0
     for i in range(n_steps):
-        state = adjust_learning_rate(args, state, optimizer, i)
-        print(args.dataset + ' LEAP ' + 'Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
+        if args.dataset in ['cifar10', 'cifar100']:
+            optimizer = optim.SGD(cnn.parameters(), lr=learning_rate_cifar(args.learning_rate1, i), momentum=0.9, weight_decay=5e-4)
+            print('LEAP LR: %f' % (learning_rate_cifar(args.learning_rate1, i)))
+        else:
+            state = adjust_learning_rate(args, state, optimizer, i)
+            print(args.dataset + ' LEAP ' + 'Iteration: [%d | %d] LR: %f' % (i + 1, n_steps, state['learning_rate1']))
 
         train_loss, train_acc, updates = train_student(args, student_model, train_loader, optimizer, use_cuda, updates, batch_builder, batch_train_inds)
         test_loss, test_acc = test_student(test_loader, student_model, criterion, use_cuda)
