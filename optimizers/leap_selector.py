@@ -335,7 +335,7 @@ def leap_selector(  args,
     updates = 0
     for i in range(n_steps):
         if args.dataset in ['cifar10', 'cifar100']:
-            optimizer = optim.SGD(cnn.parameters(), lr=learning_rate_cifar(args.learning_rate1, i), momentum=0.9, weight_decay=5e-4)
+            optimizer = optim.SGD(student_model.parameters(), lr=learning_rate_cifar(args.learning_rate1, i), momentum=0.9, weight_decay=5e-4)
             print('LEAP LR: %f' % (learning_rate_cifar(args.learning_rate1, i)))
         else:
             state = adjust_learning_rate(args, state, optimizer, i)
