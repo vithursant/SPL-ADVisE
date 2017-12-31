@@ -264,6 +264,7 @@ def spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, opti
         best_acc = max(test_acc, best_acc)
         save_checkpoint({
                 'iteration': i + 1,
+                'updates': updates,
                 'state_dict': cnn.state_dict(),
                 'acc': test_acc,
                 'best_acc': best_acc,

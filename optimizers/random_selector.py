@@ -40,22 +40,22 @@ def train(trainloader, model, criterion, optimizer, epoch, use_cuda, updates):
             inputs, targets = inputs.cuda(), targets.cuda(async=True)
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
+        optimizer.zero_grad()
         # compute output
         #pdb.set_trace()
         outputs, _ = model(inputs)
         #pdb.set_trace()
         loss = criterion(outputs, targets)
+        # compute gradient and do SGD step
+        loss.backward()
+        optimizer.step()
+        
         #pdb.set_trace()
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
         losses.update(loss.data[0], inputs.size(0))
         top1.update(prec1[0], inputs.size(0))
         top5.update(prec5[0], inputs.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -158,14 +158,18 @@ def random_selector(args, state, start_epoch, train_dataset, test_dataset, cnn, 
         train_loss, train_acc, updates = train(train_loader, cnn, criterion, optimizer, epoch, use_cuda, updates)
         test_loss, test_acc = test(test_loader, cnn, criterion, epoch, use_cuda)
 
-        # append logger file
-        logger.append([updates, state['learning_rate1'], train_loss, test_loss, train_acc, test_acc])
+        if args.dataset in ['cifar10', 'cifar100']:
+            # append logger file
+            logger.append([updates, learning_rate_cifar(args.learning_rate1, epoch), train_loss, test_loss, train_acc, test_acc])
+        else:
+            logger.append([updates, state['learning_rate1'], train_loss, test_loss, train_acc, test_acc])
 
         # save model
         is_best = test_acc > best_acc
         best_acc = max(test_acc, best_acc)
         save_checkpoint({
                 'epoch': epoch + 1,
+                'updates': updates,
                 'state_dict': cnn.state_dict(),
                 'acc': test_acc,
                 'best_acc': best_acc,

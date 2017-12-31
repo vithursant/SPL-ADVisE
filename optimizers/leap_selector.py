@@ -358,6 +358,7 @@ def leap_selector(  args,
         best_acc = max(test_acc, best_acc)
         save_checkpoint({
                 'iteration': i + 1,
+                'updates', updates,
                 'state_dict': student_model.state_dict(),
                 'acc': test_acc,
                 'best_acc': best_acc,
