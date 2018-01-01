@@ -213,7 +213,7 @@ def leap_selector(  args,
     if args.dataset in ['svhn']:
         n_steps = 8000
     if args.dataset in ['cifar100']:
-        n_steps = 1000
+        n_steps = 500
 
     _ = embedding_model.train()
 
@@ -282,7 +282,8 @@ def leap_selector(  args,
     leap_magnet_logger.close()
 
     # Student CNN
-    student_model = torch.nn.DataParallel(student_model).cuda()
+    student_model = torch.nn.DataParallel(student_model, device_ids=range(torch.cuda.device_count())).cuda()
+    cudnn.benchmark = True
 
     if args.dataset in ['cifar10', 'cifar100', 'svhn']:
         args.train_batch = 128
