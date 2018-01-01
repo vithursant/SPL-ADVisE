@@ -4,6 +4,7 @@ import torchvision
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
+import torch.backends.cudnn as cudnn
 
 from utils.misc import adjust_learning_rate, learning_rate_cifar
 from utils.eval import *
