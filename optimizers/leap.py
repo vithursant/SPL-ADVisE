@@ -142,6 +142,8 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
 
     if args.dataset in ['svhn']:
         n_steps = 8000
+    elif args.dataset in ['cifar100']:
+        n_steps = 1000
 
     _ = embedding_model.train()
     updates = 0
