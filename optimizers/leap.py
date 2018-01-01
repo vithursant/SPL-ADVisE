@@ -106,7 +106,8 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
         d = 8
         alpha = 1.0
 
-    embedding_optimizer = torch.optim.Adam(embedding_model.parameters(), lr=args.learning_rate2)
+    #embedding_optimizer = torch.optim.Adam(embedding_model.parameters(), lr=args.learning_rate2)
+    embedding_optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, embedding_model.parameters()), lr=args.learning_rate2)
     minibatch_magnet_loss = MagnetLoss()
 
     if args.dataset == 'svhn':
