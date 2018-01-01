@@ -224,17 +224,17 @@ def main():
     elif args.spld:
         spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, optimizer, use_cuda, logger)
     elif args.leap:
-        # leap_selector(  args,
-        #                 state,
-        #                 train_dataset,
-        #                 test_dataset,
-        #                 cnn,
-        #                 embedding_cnn,
-        #                 criterion,
-        #                 optimizer,
-        #                 use_cuda,
-        #                 logger)
-        leap(args, train_dataset, test_dataset, optimizer, embedding_cnn, cnn, logger)
+        leap_selector(  args,
+                        state,
+                        train_dataset,
+                        test_dataset,
+                        cnn,
+                        embedding_cnn,
+                        criterion,
+                        optimizer,
+                        use_cuda,
+                        logger)
+        # leap(args, train_dataset, test_dataset, optimizer, embedding_cnn, cnn, logger)
 
 if __name__ == '__main__':
     main()

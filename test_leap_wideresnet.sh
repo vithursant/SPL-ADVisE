@@ -1,3 +1,4 @@
+CUDA_VISIBLE_DEVICES=0,1,2 \
 python  trainer.py \
         --dataset cifar100 \
         --num-classes 100 \
