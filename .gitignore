@@ -1,3 +1,4 @@
+*.swp
 checkpoints/
 *.pyc
 *.gz

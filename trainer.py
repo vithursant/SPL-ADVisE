@@ -184,7 +184,8 @@ def main():
             num_classes = 2
             embedding_cnn = FashionSimpleNet(num_classes)
 
-    cnn = torch.nn.DataParallel(cnn, device_ids=range(torch.cuda.device_count())).cuda()
+    #cnn = torch.nn.DataParallel(cnn, device_ids=range(torch.cuda.device_count())).cuda()
+    cnn = torch.nn.DataParallel(cnn).cuda()
     cudnn.benchmark = True
 
     print('    Total params: %.2fM' % (sum(p.numel() for p in cnn.parameters())/1000000.0))
@@ -223,16 +224,17 @@ def main():
     elif args.spld:
         spld_selector(args, state, train_dataset, test_dataset, cnn, criterion, optimizer, use_cuda, logger)
     elif args.leap:
-        leap_selector(  args,
-                        state,
-                        train_dataset,
-                        test_dataset,
-                        cnn,
-                        embedding_cnn,
-                        criterion,
-                        optimizer,
-                        use_cuda,
-                        logger)
+        # leap_selector(  args,
+        #                 state,
+        #                 train_dataset,
+        #                 test_dataset,
+        #                 cnn,
+        #                 embedding_cnn,
+        #                 criterion,
+        #                 optimizer,
+        #                 use_cuda,
+        #                 logger)
+        leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_model, logger)
 
 if __name__ == '__main__':
     main()

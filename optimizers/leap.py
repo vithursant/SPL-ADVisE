@@ -56,7 +56,7 @@ def test(args, model, loader):
 
     return val_acc, val_loss
 
-def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_model, scheduler):
+def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_model, logger):
     if not os.path.exists('leap_results'):
         os.makedirs('leap_results')
     if not os.path.exists('leap_results/baseline'):
@@ -330,6 +330,9 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
         spld_params[0] = int(round(spld_params[0]))
         spld_params[1] *= (1+spld_params[3])
 
+        # append logger file
+        logger.append([updates, state['learning_rate1'], str(xentropy_loss_avg / (updates)), str(test_loss), str(accuracy), str(test_acc)])
+
         if args.dataset == 'cifar10':
             if updates >= 200*390:
                 break
@@ -342,4 +345,7 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
             if updates >= 15000:
                 break
 
+    logger.close()
+    logger.plot()
+    savefig(os.path.join(args.checkpoint, 'log.eps'))
     leap_logger.close()
