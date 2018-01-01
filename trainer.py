@@ -234,7 +234,7 @@ def main():
         #                 optimizer,
         #                 use_cuda,
         #                 logger)
-        leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_model, logger)
+        leap(args, train_dataset, test_dataset, optimizer, embedding_cnn, cnn, logger)
 
 if __name__ == '__main__':
     main()
