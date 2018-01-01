@@ -192,9 +192,9 @@ def leap(args, train_dataset, test_dataset, optimizer, embedding_model, student_
             if not i % 1000:
                 n_plot = 8000
                 if args.dataset == 'svhn':
-                    plot_embedding(compute_reps(embedding_model, train_dataset, 4680)[:n_plot], labels[:n_plot], name='leap_results/' + args.folder + '/magnet/' + args.dataset + '_leap_magnet_log_' + test_id + '_' + str(i))
+                    plot_embedding(compute_reps(embedding_model, train_dataset, 4680)[:n_plot], labels[:n_plot], name='leap_results/' + args.folder + '/magnet/' + args.dataset + '_leap_magnet_log_' + test_id + '_' + str(i), num_classes=args.num_classes)
                 else:
-                    plot_embedding(compute_reps(embedding_model, train_dataset, 400)[:n_plot], labels[:n_plot], name='leap_results/' + args.folder + '/magnet/' + args.dataset + '_leap_magnet_log_' + test_id + '_' + str(i))
+                    plot_embedding(compute_reps(embedding_model, train_dataset, 400)[:n_plot], labels[:n_plot], name='leap_results/' + args.folder + '/magnet/' + args.dataset + '_leap_magnet_log_' + test_id + '_' + str(i), num_classes=args.num_classes)
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         train_loader.sampler.batch_indices = batch_example_inds
