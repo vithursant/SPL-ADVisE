@@ -69,7 +69,7 @@ args = parse_settings()
 state = {k: v for k, v in args._get_kwargs()}
 
 # Use CUDA
-#os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
+os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 use_cuda = torch.cuda.is_available()
 
 # Random seed
