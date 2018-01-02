@@ -80,7 +80,7 @@ class ClusterBatchBuilder(object):
             self.assignments = np.zeros_like(np.array(labels), int)
         else:
             self.assignments = np.zeros_like(labels.numpy(), int)
-                        
+
         self.cluster_assignments = {}
         self.cluster_classes = np.repeat(range(self.num_classes), k)
         self.magnet_example_losses = None
@@ -97,7 +97,7 @@ class ClusterBatchBuilder(object):
         quickly sampleable form.
         """
 
-        # Lazily allocate array of zeroes as placeholders for centroids 
+        # Lazily allocate array of zeroes as placeholders for centroids
         if self.centroids is None:
             #pdb.set_trace()
             self.centroids = np.zeros([self.num_classes * self.k, rep_data.shape[1]])
@@ -109,8 +109,8 @@ class ClusterBatchBuilder(object):
             class_mask = self.labels == class_idx # Boolean mask for selecting examples
             #pdb.set_trace()
             class_examples = rep_data[class_mask] # Mask features based on the class mask
- 
-            kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=1, max_iter=max_iter)
+
+            kmeans = KMeans(n_clusters=self.k, init='k-means++', n_init=10, max_iter=max_iter)
             kmeans.fit(class_examples)
             #pdb.set_trace()
 
@@ -180,7 +180,7 @@ class ClusterBatchBuilder(object):
         Sample a batch by first sampling a seed cluster proportionally to
         the mean loss of the clusters, then finding nearest neighbor
         "impostor" clusters, then sampling d examples uniformly from each cluster.
-        
+
         The generated batch will consist of m clusters each with d consecutive
         examples.
         """
@@ -291,7 +291,7 @@ class ClusterBatchBuilder(object):
             #pdb.set_trace()
         #selected_samples_idx = np.where(selected_samples_idx == 1)
         #sortedselected_idx = np.take(selected_scores, selected_samples_idx)
-        
+
         #metric = grouploss_threshold[0] - 0.01 * grouploss_threshold[1]
         #pdb.set_trace()
 
