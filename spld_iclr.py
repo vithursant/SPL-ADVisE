@@ -464,11 +464,13 @@ if args.spl:
     epoch_steps = int(ceil(len(train_dataset)) / args.batch_size)
     n_steps = epoch_steps * 15
 
-    if args.dataset in ['cifar10', 'cifar100', 'svhn']:
+    if args.dataset in ['cifar10', 'svhn']:
         spld_params = [500, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['mnist', 'fashionmnist']:
         #spld_params = [500, 1e-3, 5e-2, 1e-1]
         spld_params = [500, 5e-1, 1e-1, 1e-1]
+    elif args.dataset in ['cifar100']:
+        spld_params = [10, 5e-1, 1e-1, 1e-1]
 
     if args.dataset == 'svhn':
         labels = train_dataset.labels

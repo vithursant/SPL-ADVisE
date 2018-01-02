@@ -265,12 +265,12 @@ class ClusterBatchBuilder(object):
             #pdb.set_trace()
         selected_samples_idx = np.where(selected_samples_idx == 1)
 
-        left_over = len(selected_samples_idx[0]) % batch_size
+        #left_over = len(selected_samples_idx[0]) % batch_size
 
-        if left_over > 0:
-            selected_samples_idx = np.append(selected_samples_idx[0], np.random.choice(range(len(self.labels)), batch_size - left_over, replace=False))
-        else:
-            selected_samples_idx = selected_samples_idx[0]
+        # if left_over > 0:
+        #     selected_samples_idx = np.append(selected_samples_idx[0], np.random.choice(range(len(self.labels)), batch_size - left_over, replace=False))
+        # else:
+        #     selected_samples_idx = selected_samples_idx[0]
             #grouploss_threshold = np.vstack((loss_incluster[sort_idx], grouped_threshold))
             #pdb.set_trace()
 
