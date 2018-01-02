@@ -557,6 +557,7 @@ if args.spl:
             scheduler.step(updates)
 
         batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.batch_size)
+        np.random.shuffle(batch_train_inds)
         train_loader.sampler.batch_indices = batch_train_inds.astype(np.int32)
 
         # Increase the learning pace
