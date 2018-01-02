@@ -349,8 +349,8 @@ def test(cnn, loader):
     total = 0.
     test_loss = 0.
     for images, labels in loader:
-        if args.dataset == 'svhn':
-            labels = labels.type_as(torch.LongTensor()).view(-1) - 1
+        #if args.dataset == 'svhn':
+        #    labels = labels.type_as(torch.LongTensor()).view(-1) - 1
 
         images = Variable(images, requires_grad=False).cuda()
         labels = Variable(labels, requires_grad=False).cuda()
@@ -608,16 +608,17 @@ if args.random:
         for i, (images, labels) in enumerate(progress_bar):
             progress_bar.set_description('Epoch ' + str(updates))
 
-            if args.dataset == 'svhn':
-                labels = labels.type_as(torch.LongTensor()).view(-1) - 1
+            #if args.dataset == 'svhn':
+            #    labels = labels.type_as(torch.LongTensor()).view(-1) - 1
 
-            images = Variable(images).cuda()
-            labels = Variable(labels).cuda()
-
+            images = Variable(images).cuda(async=True)
+            labels = Variable(labels).cuda(async=True)
+            #pdb.set_trace()
             cnn.zero_grad()
             pred, _ = cnn(images)
 
             xentropy_loss = criterion(pred, labels)
+            #pdb.set_trace()
             xentropy_loss.backward()
             cnn_optimizer.step()
             xentropy_loss_avg += xentropy_loss.data[0]
