@@ -324,7 +324,7 @@ class ClusterBatchBuilder(object):
         # selected_samples_idx = np.where(selected_samples_idx == 1)
         # sortedselected_idx = np.take(selected_scores, selected_samples_idx)
         # #pdb.set_trace()
-        return selected_samples_idx
+        return selected_samples_idx[0]
 
     def get_cluster_ind(self, c, i):
         """
