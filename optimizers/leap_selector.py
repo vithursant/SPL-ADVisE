@@ -215,6 +215,8 @@ def leap_selector(  args,
         n_steps = 8000
     if args.dataset in ['cifar100']:
         n_steps = 200
+    if args.dataset in ['cifar10']:
+        n_steps = 200
 
     _ = embedding_model.train()
 
