@@ -611,8 +611,8 @@ if args.random:
             if args.dataset == 'svhn':
                 labels = labels.type_as(torch.LongTensor()).view(-1) - 1
 
-            images = Variable(images).cuda(async=True)
-            labels = Variable(labels).cuda(async=True)
+            images = Variable(images).cuda()
+            labels = Variable(labels).cuda()
 
             cnn.zero_grad()
             pred, _ = cnn(images)
