@@ -244,28 +244,28 @@ test_transform = transforms.Compose([
 if args.dataset == 'mnist':
     num_classes = 10
     num_channels = 1
-    train_dataset = datasets.MNIST(root='./data', 
-                            train=True, 
-                            transform=train_transform, 
+    train_dataset = datasets.MNIST(root='./data',
+                            train=True,
+                            transform=train_transform,
                             download=True)
 
-    test_dataset = datasets.MNIST(root='./data', 
-                            train=False, 
-                            transform=test_transform, 
+    test_dataset = datasets.MNIST(root='./data',
+                            train=False,
+                            transform=test_transform,
                             download=True)
 
 elif args.dataset == 'fashionmnist':
     num_classes = 10
     num_channels = 1
-    train_dataset = FashionMNIST(root='./data/fashionmnist', 
-                            train=True, 
-                            transform=train_transform, 
+    train_dataset = FashionMNIST(root='./data/fashionmnist',
+                            train=True,
+                            transform=train_transform,
                             download=True)
 
-    test_dataset = FashionMNIST(root='./data/fashionmnist', 
-                            train=False,  
-                            transform=test_transform, 
-                            download=True)  
+    test_dataset = FashionMNIST(root='./data/fashionmnist',
+                            train=False,
+                            transform=test_transform,
+                            download=True)
 elif args.dataset == 'cifar10':
     num_classes = 10
     num_channels = 3
@@ -322,7 +322,7 @@ elif args.dataset == 'tinyimagenet':
 
     train_dataset = datasets.ImageFolder(root='./data/tiny-imagenet-200/train',
                                         transform=train_trainsform)
-    test_dataset = torchvision.datasets.ImageFolder(root='./data/tiny-imagenet-200/test', 
+    test_dataset = torchvision.datasets.ImageFolder(root='./data/tiny-imagenet-200/test',
                                                     transform=test_transform)
 
 def encode_onehot(labels, n_classes):
@@ -726,9 +726,9 @@ if args.magnet:
             pred, _ = shallow_net(images)
 
             batch_loss, batch_example_losses = minibatch_magnet_loss(pred,
-                                                                    batch_class_inds, 
-                                                                    m, 
-                                                                    d, 
+                                                                    batch_class_inds,
+                                                                    m,
+                                                                    d,
                                                                     alpha)
             batch_loss.backward()
             cnn_optimizer.step()
@@ -759,13 +759,13 @@ if args.magnet:
                 n_plot = 8000
                 #pdb.set_trace()
                 if args.dataset == 'svhn':
-                    plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot], 
-                                                labels[:n_plot], 
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot],
+                                                labels[:n_plot],
                                                 name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))
                 else:
-                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], 
-                                                labels[:n_plot], 
-                                                name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))  
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot],
+                                                labels[:n_plot],
+                                                name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))
                 #plot_embedding(compute_reps(cnn, train_dataset, 400)[:n_plot], labels[:n_plot], name=args.dataset + '_' + test_id + '_' + str(i))
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
@@ -837,7 +837,7 @@ if args.spldml:
     _ = shallow_net.train()
     updates = 0
 
-    if args.dataset in ['cifar10']:
+    if args.dataset in ['cifar10', 'cifar100']:
         n_steps = 200
 
     progress_bar = tqdm(range(n_steps))
@@ -853,9 +853,9 @@ if args.spldml:
             pred, _ = shallow_net(images)
 
             batch_loss, batch_example_losses = minibatch_magnet_loss(pred,
-                                                                    batch_class_inds, 
-                                                                    m, 
-                                                                    d, 
+                                                                    batch_class_inds,
+                                                                    m,
+                                                                    d,
                                                                     alpha)
             batch_loss.backward()
             shallow_optimizer.step()
@@ -888,7 +888,7 @@ if args.spldml:
                 if args.dataset == 'svhn':
                     plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))
                 else:
-                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))   
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         train_loader.sampler.batch_indices = batch_example_inds
@@ -980,7 +980,7 @@ if args.spldml:
             xentropy_loss_vector_mean = xentropy_loss_vector.mean()
             xentropy_loss_avg += xentropy_loss_vector_mean.data[0]
             #pdb.set_trace()
-            
+
             # Backward
             xentropy_loss_vector_mean.backward()
             cnn_optimizer.step()
