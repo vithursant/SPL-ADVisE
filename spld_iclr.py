@@ -935,10 +935,12 @@ if args.spldml:
     epoch_steps = int(ceil(len(train_dataset)) / args.batch_size)
     n_steps = epoch_steps * 15
 
-    if args.dataset in ['cifar10', 'cifar100', 'svhn']:
+    if args.dataset in ['cifar10', 'svhn']:
         spld_params = [500, 5e-1, 1e-1, 1e-1]
     elif args.dataset in ['mnist', 'fashionmnist']:
         spld_params = [500, 5e-1, 1e-1, 1e-1]
+    elif args.dataset in ['cifar100']:
+        spld_params = [10, 5e-1, 1e-1, 1e-1]
         #spld_params = [500, 1e-3, 5e-2, 1e-1]
         #spld_params = [100, 1e-3, 5e-2, 1e-1]
 
@@ -1021,6 +1023,7 @@ if args.spldml:
         # spldml_logger.writerow(row)
 
         batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.batch_size)
+        np.random.shuffle(batch_train_inds)
         train_loader.sampler.batch_indices = batch_train_inds
 
         # Increase the learning pace
