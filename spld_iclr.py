@@ -648,7 +648,7 @@ if args.random:
         # row = {'epoch': str(updates), 'train_acc': str(accuracy), 'train_loss': str(xentropy_loss_avg), 'test_acc': str(test_acc), 'test_loss': str(test_loss)}
         # random_logger.writerow(row)
 
-        if args.dataset == 'cifar10':
+        if args.dataset in ['cifar10', 'cifar100']:
             if updates >= 200*390:
                 break
         elif args.dataset in ['mnist','fashionmnist']:
@@ -1031,7 +1031,7 @@ if args.spldml:
         spld_params[0] = int(round(spld_params[0]))
         spld_params[1] *= (1+spld_params[3])
 
-        if args.dataset == 'cifar10':
+        if args.dataset in ['cifar10', 'cifar100']:
             if updates >= 200*390:
                 break
         elif args.dataset in ['mnist','fashionmnist']:
