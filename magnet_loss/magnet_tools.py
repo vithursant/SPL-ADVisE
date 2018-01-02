@@ -218,7 +218,7 @@ class ClusterBatchBuilder(object):
         for i, c in enumerate(clusters):
             #pdb.set_trace()
             # Go through each cluster and select random samples that are size self.d
-            x = np.random.choice(self.cluster_assignments[c], self.d, replace=False)
+            x = np.random.choice(self.cluster_assignments[c], self.d, replace=True)
             start = i * self.d
             stop = start + self.d
             batch_indexes[start:stop] = x
