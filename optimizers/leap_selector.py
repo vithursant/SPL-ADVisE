@@ -283,7 +283,7 @@ def leap_selector(  args,
     leap_magnet_logger.close()
 
     # Student CNN
-    student_model = torch.nn.DataParallel(student_model, device_ids=range(torch.cuda.device_count())).cuda()
+    student_model = torch.nn.DataParallel(student_model).cuda()
     cudnn.benchmark = True
 
     if args.dataset in ['cifar10', 'cifar100', 'svhn']:
@@ -335,6 +335,9 @@ def leap_selector(  args,
 
     best_acc = 0  # best test accuracy
     updates = 0
+
+    _ = student_model.train()
+
     for i in range(n_steps):
         if args.dataset in ['cifar10', 'cifar100']:
             optimizer = optim.SGD(student_model.parameters(), lr=learning_rate_cifar(args.learning_rate1, i), momentum=0.9, weight_decay=5e-4)
