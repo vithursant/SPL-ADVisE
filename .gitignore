@@ -1,3 +1,6 @@
+spld_results/
+checkpoints/
+leap_results/
 *.pyc
 *.gz
 *.png

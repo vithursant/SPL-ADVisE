@@ -837,6 +837,9 @@ if args.spldml:
     _ = shallow_net.train()
     updates = 0
 
+    if args.dataset in ['cifar10']:
+        n_steps = 200
+
     progress_bar = tqdm(range(n_steps))
     for i in progress_bar:
         batch_loss_avg = 0.
