@@ -844,6 +844,9 @@ if args.spldml:
     #if args.dataset in ['cifar10', 'cifar100']:
     #    n_steps = 200
 
+    if args.dataset in ['svhn']:
+        n_steps = 8000
+
     progress_bar = tqdm(range(n_steps))
     for i in progress_bar:
         batch_loss_avg = 0.
