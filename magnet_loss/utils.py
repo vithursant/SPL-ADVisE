@@ -71,7 +71,7 @@ def plot_embedding(X, y, imgs=None, title=None, name=None):
     if title is not None:
         plt.title(title)
 
-    plt.savefig(str(name) + '.svg')
+    plt.savefig(str(name) + '.pdf')
 
 def zip_chain(a, b):
     return list(chain(*zip(a, b)))
