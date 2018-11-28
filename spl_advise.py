@@ -1,4 +1,20 @@
-#sqsub -q gpu -f mpi -n 1 --mpp=4G -r 240m --gpp 1 -o /dev/null --nompirun screen -D -m
+# Copyright 2018 Vithursan Thangarasa.
+#
+# This file is part of SPL-ADVisE.
+#
+# SPL-ADVisE is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# SPL-ADVisE is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# SPL-ADVisE. If not, see <http://www.gnu.org/licenses/>.
+
 
 import matplotlib
 matplotlib.use('Agg')
@@ -20,7 +36,6 @@ from tqdm import tqdm, trange
 import numpy as np
 import pdb
 
-#import visdom
 import csv
 from models.preact_resnet import PreActResNet18, PreActResNet34, PreActResNet50, PreActResNet101, PreActResNet152
 from models.wide_resnet import Wide_ResNet
@@ -36,6 +51,9 @@ from utils.sampler import SubsetSequentialSampler
 from magnet_loss.magnet_tools import *
 from magnet_loss.magnet_loss import MagnetLoss
 from magnet_loss.utils import *
+
+# For distributed computing on SLURM
+#sqsub -q gpu -f mpi -n 1 --mpp=4G -r 240m --gpp 1 -o /dev/null --nompirun screen -D -m
 
 #vis = visdom.Visdom()
 #vis.env = 'cnn_feat_dropout'

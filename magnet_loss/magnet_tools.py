@@ -1,3 +1,20 @@
+# Copyright 2018 Vithursan Thangarasa.
+#
+# This file is part of SPL-ADVisE.
+#
+# SPL-ADVisE is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# SPL-ADVisE is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# SPL-ADVisE. If not, see <http://www.gnu.org/licenses/>.
+
 from math import ceil
 import numpy as np
 from sklearn.cluster import KMeans
@@ -29,29 +46,6 @@ def compute_reps(model, X, chunk_size, device):
         reps.append(embeddings.cpu().numpy())
         #labels.append(target.cpu().numpy())
     return np.vstack(reps)
-
-# def compute_reps(model, X, chunk_size):
-#     """Compute representations for input in chunks."""
-#     chunks = int(ceil(float(len(X)) / chunk_size))
-#     #print(chunks)
-#     reps = []
-#     labels = []
-
-#     trainloader = DataLoader(X,
-#                          batch_size=chunks,
-#                          shuffle=False,
-#                          num_workers=4)
-
-#     for batch_idx, (img, target) in tqdm(enumerate(trainloader)):
-#         img = Variable(img).cuda()
-#         #pdb.set_trace()
-#         output, train_features, _ = model(img)
-#         #train_features = model(img)
-#         embeddings = output.data
-#         #pdb.set_trace()
-#         reps.append(embeddings.cpu().numpy())
-#         #labels.append(target.cpu().numpy())
-#     return np.vstack(reps)
 
 class ClusterBatchBuilder(object):
     """Sample minibatches for magnet loss."""
