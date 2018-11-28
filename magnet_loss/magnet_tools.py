@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import pdb
 
-def compute_reps(model, X, chunk_size):
+def compute_reps(model, X, chunk_size, device):
     """Compute representations for input in chunks."""
     chunks = int(ceil(float(len(X)) / chunk_size))
     #print(chunks)
@@ -20,7 +20,7 @@ def compute_reps(model, X, chunk_size):
                          num_workers=4)
 
     for batch_idx, (img, target) in tqdm(enumerate(trainloader)):
-        img = Variable(img).cuda()
+        img = Variable(img).to(device)
         #pdb.set_trace()
         output, train_features = model(img)
         #train_features = model(img)

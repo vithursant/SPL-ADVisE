@@ -11,9 +11,11 @@ import torch.nn as nn
 from torchvision import datasets, transforms
 from torchvision.utils import make_grid
 from torch.autograd import Variable
-from torch.utils.data.sampler import Sampler
+from torch.optim.lr_scheduler import ReduceLROnPlateau, ExponentialLR, StepLR, MultiStepLR
+
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
+
 from tqdm import tqdm, trange
 import numpy as np
 import pdb
@@ -26,11 +28,11 @@ from models.lenet import LeNet
 from models.magnet_lenet import MagnetLeNet
 from models.fashion_model import FashionSimpleNet
 from models.vgg_cifar import VGG
-from torch.optim.lr_scheduler import ReduceLROnPlateau, ExponentialLR, StepLR, MultiStepLR
 
 from datasets.fashion import FashionMNIST
+
 from utils.sampler import SubsetSequentialSampler
-from utils.augment import *
+
 from magnet_loss.magnet_tools import *
 from magnet_loss.magnet_loss import MagnetLoss
 from magnet_loss.utils import *
@@ -59,7 +61,7 @@ parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 20)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
-parser.add_argument('--spl', action='store_true', default=False,
+parser.add_argument('--spld', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--random', action='store_true', default=False,
                     help='enables CUDA training')
@@ -91,8 +93,8 @@ parser.add_argument('--en-scheduler', action='store_true', default=False,
                     help='Enable LR scheduler')
 parser.add_argument('--magnet', action='store_true', default=False,
                     help='Enable Magnet Loss')
-parser.add_argument('--spldml', action='store_true', default=False,
-                    help='Enable SPLDML')
+parser.add_argument('--spladvise', action='store_true', default=False,
+                    help='Enable SPL-ADVisE')
 parser.add_argument('--plot', action='store_true', default=False,
                     help='Plot clustering')
 
@@ -139,42 +141,42 @@ torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
-if args.spl:
-    if not os.path.exists('spl_results'):
-        os.makedirs('spl_results')
-    if not os.path.exists('spl_results/baseline'):
-        os.makedirs('spl_results/baseline')
+if args.spld:
+    if not os.path.exists('spld_results'):
+        os.makedirs('spld_results')
+    if not os.path.exists('spld_results/baseline'):
+        os.makedirs('spld_results/baseline')
 
     i = 0
-    while os.path.isfile('spl_results/' + args.folder + '/' + args.dataset + '_spl_log_' + str(i) + '.csv'):
+    while os.path.isfile('spld_results/' + args.folder + '/' + args.dataset + '_spld_log_' + str(i) + '.csv'):
         i += 1
     args.test_id = i
     test_id = str(args.test_id)
 
-    spl_logger = CSVLogger(filename='spl_results/' + args.folder + '/' + args.dataset + '_spl_log_' + test_id + '.csv', fieldnames=['epoch', 'train_acc', 'train_loss', 'test_acc', 'test_loss'])
+    spld_logger = CSVLogger(filename='spld_results/' + args.folder + '/' + args.dataset + '_spld_log_' + test_id + '.csv', fieldnames=['epoch', 'train_acc', 'train_loss', 'test_acc', 'test_loss'])
 
-if args.spldml:
-    if not os.path.exists('spld_dml_results'):
-        os.makedirs('spld_dml_results')
-    if not os.path.exists('spld_dml_results/baseline'):
-        os.makedirs('spld_dml_results/baseline')
-    if not os.path.exists('spld_dml_results/baseline/magnet'):
-        os.makedirs('spld_dml_results/baseline/magnet')
+if args.spladvise:
+    if not os.path.exists('spl_advise_results'):
+        os.makedirs('spl_advise_results')
+    if not os.path.exists('spl_advise_results/baseline'):
+        os.makedirs('spl_advise_results/baseline')
+    if not os.path.exists('spl_advise_results/baseline/magnet'):
+        os.makedirs('spl_advise_results/baseline/magnet')
 
     i = 0
-    while os.path.isfile('spld_dml_results/' + args.folder + '/' + args.dataset + '_spldml_log_' + str(i) + '.csv'):
+    while os.path.isfile('spl_advise_results/' + args.folder + '/' + args.dataset + '_spladvise_log_' + str(i) + '.csv'):
         i += 1
     args.test_id = i
     test_id = str(args.test_id)
 
     i = 0
-    while os.path.isfile('spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + str(i) + '.csv'):
+    while os.path.isfile('spl_advise_results/' + args.folder + '/magnet/' + args.dataset + '_spladvise_magnet_log_' + str(i) + '.csv'):
         i += 1
     args.test_id = i
     test_id = str(args.test_id)
 
-    spldml_logger = CSVLogger(filename='spld_dml_results/' + args.folder + '/' + args.dataset + '_spldml_log_' + test_id + '.csv', fieldnames=['epoch', 'train_acc', 'train_loss', 'test_acc', 'test_loss'])
-    spldml_magnet_logger = CSVLogger(filename='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '.csv', fieldnames=['epoch', 'batch_loss'])
+    spladvise_logger = CSVLogger(filename='spl_advise_results/' + args.folder + '/' + args.dataset + '_spladvise_log_' + test_id + '.csv', fieldnames=['epoch', 'train_acc', 'train_loss', 'test_acc', 'test_loss'])
+    spladvise_magnet_logger = CSVLogger(filename='spl_advise_results/' + args.folder + '/magnet/' + args.dataset + '_spladvise_magnet_log_' + test_id + '.csv', fieldnames=['epoch', 'batch_loss'])
 
 if args.magnet:
     if not os.path.exists('magnet_results'):
@@ -204,7 +206,12 @@ if args.random:
 
     random_logger = CSVLogger(filename='random_results/' + args.folder + '/' + args.dataset + '_random_log_' + test_id + '.csv', fieldnames=['epoch', 'train_acc', 'train_loss', 'test_acc', 'test_loss'])
 
-print args
+print (args)
+use_cuda = not args.no_cuda and torch.cuda.is_available()
+
+torch.manual_seed(args.seed)
+
+device = torch.device("cuda" if use_cuda else "cpu")
 
 # Image Preprocessing
 if args.dataset == 'svhn':
@@ -388,7 +395,7 @@ elif args.model == 'magnetlenet':
 elif args.model == 'magnetfashion':
     cnn = FashionSimpleNet(num_classes)
 
-if args.spldml or args.magnet:
+if args.spladvise or args.magnet:
     if args.shallow_model == 'resnet18':
         num_classes = 2
         shallow_net = PreActResNet18(channels=num_channels, num_classes=num_classes)
@@ -421,7 +428,7 @@ if args.spldml or args.magnet:
         num_classes = 2
         shallow_net = FashionSimpleNet(num_classes)
 
-if not args.spldml:
+if not args.spladvise:
     cnn = torch.nn.DataParallel(cnn).cuda()
     criterion = nn.CrossEntropyLoss().cuda()
 
@@ -436,7 +443,7 @@ if args.dataset == 'svhn':
 else:
     scheduler = MultiStepLR(cnn_optimizer, milestones=[23400, 46800, 62400], gamma=0.1)
 
-if args.spl:
+if args.spld:
     train_sampler = SubsetSequentialSampler(range(len(train_dataset)), range(len(train_dataset)))
     train_loader = DataLoader(train_dataset,
                              batch_size=args.batch_size,
@@ -480,9 +487,9 @@ if args.spl:
         labels = getattr(train_dataset, 'train_labels')
         #pdb.set_trace()
     if args.dataset == 'svhn':
-        initial_reps = compute_reps(cnn, train_dataset, 4680)
+        initial_reps = compute_reps(cnn, train_dataset, 4680, device)
     else:
-        initial_reps = compute_reps(cnn, train_dataset, 400)
+        initial_reps = compute_reps(cnn, train_dataset, 400, device)
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
@@ -501,8 +508,8 @@ if args.spl:
             # if args.dataset == 'svhn':
             #     labels = labels.type_as(torch.LongTensor()).view(-1) - 1
 
-            images = Variable(images).cuda(async=True)
-            labels = Variable(labels).cuda(async=True)
+            images = Variable(images).cuda()
+            labels = Variable(labels).cuda()
 
             cnn.zero_grad()
             pred, features = cnn(images)
@@ -545,13 +552,13 @@ if args.spl:
 
             updates += 1
 
-        torchvision.utils.save_image(images.data, 'spl_results/' + args.folder + '/' + args.dataset + '_spl_log_' + test_id + '.jpg', normalize=True)
+        torchvision.utils.save_image(images.data, 'spld_results/' + args.folder + '/' + args.dataset + '_spld_log_' + test_id + '.jpg', normalize=True)
 
         test_acc, test_loss = test(cnn, test_loader)
         tqdm.write('test_acc: %.3f' % (test_acc))
 
         row = {'epoch': str(updates), 'train_acc': str(accuracy), 'train_loss': str(xentropy_loss_avg / (updates)), 'test_acc': str(test_acc), 'test_loss': str(test_loss)}
-        spl_logger.writerow(row)
+        spld_logger.writerow(row)
 
         if args.en_scheduler:
             scheduler.step(updates)
@@ -576,7 +583,7 @@ if args.spl:
         #   print("Refreshing clusters")
         #   reps = compute_reps(cnn, train_dataset, 400)
         #   batch_builder.update_clusters(reps)
-    spl_logger.close()
+    spld_logger.close()
 
 if args.random:
     # Data Loader (Input Pipeline)
@@ -611,8 +618,8 @@ if args.random:
             #if args.dataset == 'svhn':
             #    labels = labels.type_as(torch.LongTensor()).view(-1) - 1
 
-            images = Variable(images).cuda(async=True)
-            labels = Variable(labels).cuda(async=True)
+            images = Variable(images).to(device)
+            labels = Variable(labels).to(device)
             #pdb.set_trace()
             cnn.zero_grad()
             pred, _ = cnn(images)
@@ -661,7 +668,7 @@ if args.random:
     random_logger.close()
 
 if args.magnet:
-    shallow_net = torch.nn.DataParallel(shallow_net).cuda()
+    shallow_net = torch.nn.DataParallel(shallow_net).to(device)
     args.batch_size = 64
     n_train = len(train_dataset)
     train_sampler = SubsetSequentialSampler(range(len(train_dataset)), range(args.batch_size))
@@ -682,7 +689,7 @@ if args.magnet:
     alpha = 1.0
 
     cnn_optimizer = torch.optim.Adam(shallow_net.parameters(), lr=args.learning_rate2)
-    minibatch_magnet_loss = MagnetLoss()
+    minibatch_magnet_loss = MagnetLoss(device=device)
 
     if args.dataset == 'svhn':
         labels = train_dataset.labels
@@ -690,9 +697,9 @@ if args.magnet:
         labels = getattr(train_dataset, 'train_labels')
 
     if args.dataset == 'svhn':
-        initial_reps = compute_reps(shallow_net, train_dataset, 4680)
+        initial_reps = compute_reps(shallow_net, train_dataset, 4680, device)
     else:
-        initial_reps = compute_reps(shallow_net, train_dataset, 400)
+        initial_reps = compute_reps(shallow_net, train_dataset, 400, device)
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
@@ -753,9 +760,9 @@ if args.magnet:
         if not i % cluster_refresh_interval:
             print("Refreshing clusters")
             if args.dataset == 'svhn':
-                reps = compute_reps(shallow_net, train_dataset, 4680)
+                reps = compute_reps(shallow_net, train_dataset, 4680, device)
             else:
-                reps = compute_reps(shallow_net, train_dataset, 400)
+                reps = compute_reps(shallow_net, train_dataset, 400, device)
             batch_builder.update_clusters(reps)
 
         if args.plot:
@@ -765,12 +772,13 @@ if args.magnet:
                 if args.dataset == 'svhn':
                     plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot],
                                                 labels[:n_plot],
-                                                name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))
+                                                'magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i),
+                                                device)
                 else:
                     plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot],
                                                 labels[:n_plot],
-                                                name='magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i))
-                #plot_embedding(compute_reps(cnn, train_dataset, 400)[:n_plot], labels[:n_plot], name=args.dataset + '_' + test_id + '_' + str(i))
+                                                'magnet_results/' + args.folder + '/' + args.dataset + '_magnet_log_' + test_id + '_' + str(i),
+                                                device)
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         train_loader.sampler.batch_indices = batch_example_inds
@@ -783,8 +791,8 @@ if args.magnet:
 
     magnet_logger.close()
 
-if args.spldml:
-    shallow_net = torch.nn.DataParallel(shallow_net).cuda()
+if args.spladvise:
+    shallow_net = torch.nn.DataParallel(shallow_net).to(device)
     args.batch_size = 64
     n_train = len(train_dataset)
 
@@ -806,7 +814,7 @@ if args.spldml:
     alpha = 1.0
 
     shallow_optimizer = torch.optim.Adam(shallow_net.parameters(), lr=args.learning_rate2)
-    minibatch_magnet_loss = MagnetLoss()
+    minibatch_magnet_loss = MagnetLoss(device=device)
 
     if args.dataset == 'svhn':
         labels = train_dataset.labels
@@ -814,9 +822,9 @@ if args.spldml:
         labels = getattr(train_dataset, 'train_labels')
 
     if args.dataset == 'svhn':
-        initial_reps = compute_reps(shallow_net, train_dataset, 4680)
+        initial_reps = compute_reps(shallow_net, train_dataset, 4680, device)
     else:
-        initial_reps = compute_reps(shallow_net, train_dataset, 400)
+        initial_reps = compute_reps(shallow_net, train_dataset, 400, device)
 
     batch_builder = ClusterBatchBuilder(labels, k, m, d)
     batch_builder.update_clusters(initial_reps, max_iter=args.max_iter)
@@ -853,8 +861,8 @@ if args.spldml:
 
         for batch_idx, (images, targets) in enumerate(train_loader):
             #progress_bar.set_description('Epoch ' + str(updates))
-            images = Variable(images).cuda()
-            targets = Variable(targets).cuda()
+            images = Variable(images).to(device)
+            targets = Variable(targets).to(device)
 
             shallow_net.zero_grad()
             pred, _ = shallow_net(images)
@@ -867,7 +875,7 @@ if args.spldml:
             batch_loss.backward()
             shallow_optimizer.step()
 
-            batch_loss_avg += batch_loss.data[0]
+            batch_loss_avg += batch_loss.item()
             updates += 1
 
         progress_bar.set_postfix(
@@ -876,7 +884,7 @@ if args.spldml:
         batch_builder.update_losses(batch_example_inds,
                                     batch_example_losses, 'magnet')
 
-        batch_losses.append(batch_loss.data[0])
+        batch_losses.append(batch_loss.item())
 
         # if not i % 100:
         #     print (i, batch_loss)
@@ -884,29 +892,33 @@ if args.spldml:
         if not i % cluster_refresh_interval:
             print("Refreshing clusters")
             if args.dataset == 'svhn':
-                reps = compute_reps(shallow_net, train_dataset, 4680)
+                reps = compute_reps(shallow_net, train_dataset, 4680, device)
             else:
-                reps = compute_reps(shallow_net, train_dataset, 400)
+                reps = compute_reps(shallow_net, train_dataset, 400, device)
             batch_builder.update_clusters(reps)
 
         if args.plot:
             if not i % 1000:
                 n_plot = 8000
                 if args.dataset == 'svhn':
-                    plot_embedding(compute_reps(shallow_net, train_dataset, 4680)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 4680, device)[:n_plot], 
+                                   labels[:n_plot], 
+                                   'spl_advise_results/' + args.folder + '/magnet/' + args.dataset + '_spladvise_magnet_log_' + test_id + '_' + str(i))
                 else:
-                    plot_embedding(compute_reps(shallow_net, train_dataset, 400)[:n_plot], labels[:n_plot], name='spld_dml_results/' + args.folder + '/magnet/' + args.dataset + '_spldml_magnet_log_' + test_id + '_' + str(i))
+                    plot_embedding(compute_reps(shallow_net, train_dataset, 400, device)[:n_plot], 
+                                   labels[:n_plot], 
+                                   'spl_advise_results/' + args.folder + '/magnet/' + args.dataset + '_spladvise_magnet_log_' + test_id + '_' + str(i))
 
         batch_example_inds, batch_class_inds = batch_builder.gen_batch()
         train_loader.sampler.batch_indices = batch_example_inds
 
         row = {'epoch': str(updates), 'batch_loss': str(batch_loss.data[0])}
-        spldml_magnet_logger.writerow(row)
+        spladvise_magnet_logger.writerow(row)
 
     if args.plot:
         plot_smooth(batch_losses, args.dataset + '_' + test_id + '_batch-losses')
 
-    spldml_magnet_logger.close()
+    spladvise_magnet_logger.close()
 
     cnn = torch.nn.DataParallel(cnn).cuda()
 
@@ -967,8 +979,8 @@ if args.spldml:
             # if args.dataset == 'svhn':
             #     labels = labels.type_as(torch.LongTensor()).view(-1) - 1
 
-            images = Variable(images).cuda(async=True)
-            labels = Variable(labels).cuda(async=True)
+            images = Variable(images).to(device)
+            labels = Variable(labels).to(device)
 
             cnn.zero_grad()
             pred, features = cnn(images)
@@ -1010,21 +1022,18 @@ if args.spldml:
             updates += 1
 
             batch_builder.update_losses(batch_train_inds[start:stop],
-                                    xentropy_loss_vector.squeeze(), 'spld')
+                                    xentropy_loss_vector.squeeze(), 'spl')
 
-        torchvision.utils.save_image(images.data, 'spld_dml_results/' + args.folder + '/' + args.dataset + '_spldml_magnet_log_' + test_id + '.jpg', normalize=True)
+        torchvision.utils.save_image(images.data, 'spl_advise_results/' + args.folder + '/' + args.dataset + '_spladvise_magnet_log_' + test_id + '.jpg', normalize=True)
 
         test_acc, test_loss = test(cnn, test_loader)
         tqdm.write('test_acc: %.3f' % (test_acc))
 
         row = {'epoch': str(updates), 'train_acc': str(accuracy), 'train_loss': str(xentropy_loss_avg / (updates)), 'test_acc': str(test_acc), 'test_loss': str(test_loss)}
-        spldml_logger.writerow(row)
+        spladvise_logger.writerow(row)
 
         if args.en_scheduler:
             scheduler.step(updates)
-
-        # row = {'epoch': str(updates), 'train_acc': str(accuracy), 'train_loss': str(xentropy_loss_avg), 'test_acc': str(test_acc), 'test_loss': str(test_loss)}
-        # spldml_logger.writerow(row)
 
         batch_train_inds = batch_builder.gen_batch_spl(spld_params[0], spld_params[1], args.batch_size)
         #np.random.shuffle(batch_train_inds)
@@ -1041,4 +1050,4 @@ if args.spldml:
         elif args.dataset in ['mnist','fashionmnist']:
             if updates >= 60*390:
                 break
-    spldml_logger.close()
+    spladvise_logger.close()

@@ -6,8 +6,16 @@ import torch.nn.functional as F
 import numpy as np
 import pdb
 
+GPU_INT_DTYPE = torch.cuda.IntTensor
+GPU_LONG_DTYPE = torch.cuda.LongTensor
+GPU_FLOAT_DTYPE = torch.cuda.FloatTensor
+
+INT_DTYPE = torch.IntTensor
+LONG_DTYPE = torch.LongTensor
+FLOAT_DTYPE = torch.FloatTensor
+
 class MagnetLoss(nn.Module):
-	def __init__(self, alpha=1.0):
+	def __init__(self, alpha=1.0, device='cpu'):
 		super(MagnetLoss, self).__init__()
 		self.r = None
 		self.classes = None
@@ -15,16 +23,21 @@ class MagnetLoss(nn.Module):
 		self.cluster_classes = None
 		self.n_clusters = None
 		self.alpha = alpha
+		self.device = device
 
 	def forward(self, r, classes, m, d, alpha=1.0):
-		GPU_INT_DTYPE = torch.cuda.IntTensor
-		GPU_LONG_DTYPE = torch.cuda.LongTensor
-		GPU_FLOAT_DTYPE = torch.cuda.FloatTensor
 
 		self.r = r
-		self.classes = torch.from_numpy(classes).type(GPU_LONG_DTYPE)
-		self.clusters, _ = torch.sort(torch.arange(0, float(m)).repeat(d))
-		self.clusters = self.clusters.type(GPU_INT_DTYPE)
+
+		if self.device == 'cuda':
+			self.classes = torch.from_numpy(classes).type(GPU_LONG_DTYPE)
+			self.clusters, _ = torch.sort(torch.arange(0, float(m)).repeat(d))
+			self.clusters = self.clusters.type(GPU_INT_DTYPE)
+		else:
+			self.classes = torch.from_numpy(classes).type(LONG_DTYPE)
+			self.clusters, _ = torch.sort(torch.arange(0, float(m)).repeat(d))
+			self.clusters = self.clusters.type(INT_DTYPE)
+
 		self.cluster_classes = self.classes[0:m*d:d]
 		self.n_clusters = m
 		self.alpha = alpha
@@ -40,11 +53,16 @@ class MagnetLoss(nn.Module):
 		sample_costs = compute_euclidean_distance(cluster_means, expand_dims(r, 1))
 		#pdb.set_trace()
 
-		clusters_tensor = self.clusters.type(GPU_FLOAT_DTYPE)
-		n_clusters_tensor = torch.arange(0, self.n_clusters).type(GPU_FLOAT_DTYPE)
+		if self.device == 'cuda':
+			clusters_tensor = self.clusters.type(GPU_FLOAT_DTYPE)
+			n_clusters_tensor = torch.arange(0, self.n_clusters).type(GPU_FLOAT_DTYPE)
+			intra_cluster_mask = Variable(comparison_mask(clusters_tensor, n_clusters_tensor).type(GPU_FLOAT_DTYPE))
+		else:
+			clusters_tensor = self.clusters.type(FLOAT_DTYPE)
+			n_clusters_tensor = torch.arange(0, self.n_clusters).type(FLOAT_DTYPE)
+			intra_cluster_mask = Variable(comparison_mask(clusters_tensor, n_clusters_tensor).type(FLOAT_DTYPE))
 		#pdb.set_trace()
 
-		intra_cluster_mask = Variable(comparison_mask(clusters_tensor, n_clusters_tensor).type(GPU_FLOAT_DTYPE))
 		#pdb.set_trace()
 
 		intra_cluster_costs = torch.sum(intra_cluster_mask * sample_costs, dim=1)
@@ -63,13 +81,16 @@ class MagnetLoss(nn.Module):
 		numerator = torch.exp(var_normalizer * intra_cluster_costs - self.alpha)
 		#pdb.set_trace()
 
-		classes_tensor = self.classes.type(GPU_FLOAT_DTYPE)
-		cluster_classes_tensor = self.cluster_classes.type(GPU_FLOAT_DTYPE)
-		#pdb.set_trace()
-
-		# Compute denominator
-		diff_class_mask = Variable(comparison_mask(classes_tensor, cluster_classes_tensor).type(GPU_FLOAT_DTYPE))
-		#pdb.set_trace()
+		if self.device == 'cuda':
+			classes_tensor = self.classes.type(GPU_FLOAT_DTYPE)
+			cluster_classes_tensor = self.cluster_classes.type(GPU_FLOAT_DTYPE)
+			# Compute denominator
+			diff_class_mask = Variable(comparison_mask(classes_tensor, cluster_classes_tensor).type(GPU_FLOAT_DTYPE))
+		else:
+			classes_tensor = self.classes.type(FLOAT_DTYPE)
+			cluster_classes_tensor = self.cluster_classes.type(FLOAT_DTYPE)
+			# Compute denominator
+			diff_class_mask = Variable(comparison_mask(classes_tensor, cluster_classes_tensor).type(FLOAT_DTYPE))
 
 		diff_class_mask = 1 - diff_class_mask # Logical not on ByteTensor
 		#pdb.set_trace()
