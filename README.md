@@ -1,7 +1,7 @@
 # SPL-ADVisE
 
 
-This code was used in the BMVC publication: "Self-Paced Learning with Adaptive Deep Visual Embeddings" by [Vithursan Thangarasa](embedding.ai) and [Graham W. Taylor](https://www.gwtaylor.ca/).
+This code was used in the BMVC publication: "Self-Paced Learning with Adaptive Deep Visual Embeddings" by [Vithursan Thangarasa](vithursant.com) and [Graham W. Taylor](https://www.gwtaylor.ca/).
 
 To cite our work, please use the following bibtex entry.
 
